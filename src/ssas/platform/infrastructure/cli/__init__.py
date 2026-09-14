@@ -1,1 +1,0 @@
-"""Comandos operativos de plataforma."""

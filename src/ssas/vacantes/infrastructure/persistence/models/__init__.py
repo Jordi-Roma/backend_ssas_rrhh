@@ -1,1 +1,0 @@
-"""Modelos ORM de vacantes."""

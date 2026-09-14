@@ -77,7 +77,7 @@ def _raise_http_auth_error(exc: AuthError) -> None:
     if isinstance(exc, UserNotFoundError):
         code = status.HTTP_404_NOT_FOUND
     elif isinstance(exc, InvalidPasswordError):
-        code = status.HTTP_422_UNPROCESSABLE_ENTITY
+        code = status.HTTP_422_UNPROCESSABLE_CONTENT
     elif isinstance(exc, AccountLockedError):
         code = status.HTTP_423_LOCKED
     elif isinstance(exc, EmailNotVerifiedError):
@@ -463,7 +463,9 @@ async def reset_password(
     summary="Registrar nueva empresa y administrador",
     description="Permite el auto-registro público de un nuevo tenant con su cuenta administradora inicial.",
     responses={
-        409: {"description": "Ya existe una empresa con ese NIT o slug, o el usuario/correo ya está en uso."},
+        409: {
+            "description": "Ya existe una empresa con ese NIT o slug, o el usuario/correo ya está en uso."
+        },
         422: {"description": "Datos de registro inválidos."},
     },
 )
@@ -546,4 +548,3 @@ async def registro_empresa(
             status_code=status.HTTP_409_CONFLICT,
             detail="No se pudo completar el registro de la empresa",
         ) from exc
-

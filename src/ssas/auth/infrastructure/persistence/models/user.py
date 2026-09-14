@@ -52,8 +52,10 @@ class UserModel(Base):
     empresa_id: Mapped[str | None] = mapped_column(
         UUID(as_uuid=False), ForeignKey("empresa.id", ondelete="CASCADE"), nullable=True
     )
-    name: Mapped[str] = mapped_column("nombre", String(120), nullable=False)
-    apellido: Mapped[str] = mapped_column(String(120), nullable=False, server_default="")
+    name: Mapped[str] = mapped_column("nombres", String(120), nullable=False)
+    apellido: Mapped[str] = mapped_column(
+        "apellidos", String(120), nullable=False, server_default=""
+    )
     email: Mapped[str] = mapped_column(String(150), nullable=False)
     username: Mapped[str] = mapped_column(String(80), nullable=False)
     hashed_password: Mapped[str] = mapped_column("password_hash", Text, nullable=False)
@@ -94,9 +96,7 @@ class UserModel(Base):
         back_populates="user", cascade="all, delete-orphan"
     )
     bitacoras: Mapped[list["AuditLogModel"]] = relationship(back_populates="user")
-    vacantes_responsables: Mapped[list["VacanteModel"]] = relationship(
-        back_populates="responsable"
-    )
+    vacantes_responsables: Mapped[list["VacanteModel"]] = relationship(back_populates="responsable")
 
 
 Index(

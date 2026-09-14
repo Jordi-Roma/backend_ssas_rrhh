@@ -1,1 +1,0 @@
-"""HTTP de administración global."""

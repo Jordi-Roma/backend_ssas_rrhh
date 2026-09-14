@@ -15,6 +15,7 @@ def import_all_models() -> None:
     import ssas.cargos.infrastructure.persistence.models.cargo
     import ssas.departamentos.infrastructure.persistence.models.departamento
     import ssas.empresas.infrastructure.persistence.models.empresa
+    import ssas.empresas.infrastructure.persistence.models.suscripcion
     import ssas.habilidades.infrastructure.persistence.models.habilidad
     import ssas.modulos.infrastructure.persistence.models.empresa_modulo
     import ssas.modulos.infrastructure.persistence.models.modulo

@@ -1,1 +1,0 @@
-"""Infraestructura de postulaciones."""

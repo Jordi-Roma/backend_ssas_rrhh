@@ -101,7 +101,7 @@ async def _responsable_vacante(
     responsable_id = result.scalar_one_or_none()
     if responsable_id is None:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail="La empresa seleccionada no tiene usuarios activos para asignar "
             "como responsable de la vacante. Registra o activa un miembro primero.",
         )
@@ -144,9 +144,7 @@ async def crear_vacante(
     try:
         empresa_id = _empresa(current_user, empresa_id)
         responsable_id = await _responsable_vacante(session, current_user, empresa_id)
-        vacante = await _service(session).crear(
-            empresa_id, responsable_id, request.model_dump()
-        )
+        vacante = await _service(session).crear(empresa_id, responsable_id, request.model_dump())
     except IntegrityError as exc:
         raise HTTPException(status_code=409, detail="No se pudo crear la vacante") from exc
     except VacanteError as exc:
@@ -428,4 +426,3 @@ async def obtener_vacante_publica(
         return await _service(session).obtener_publica(empresa_slug, vacante_id)
     except VacanteNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Vacante no encontrada") from exc
-

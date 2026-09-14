@@ -1,1 +1,0 @@
-"""Persistencia global de plataforma."""

@@ -31,7 +31,9 @@ class RoleModel(Base):
     name: Mapped[str] = mapped_column("nombre", String(120), nullable=False)
     codigo: Mapped[str] = mapped_column(String(80), nullable=False)
     description: Mapped[str | None] = mapped_column("descripcion", Text, nullable=True)
-    es_base: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    es_base: Mapped[bool] = mapped_column(
+        "es_sistema", Boolean, nullable=False, server_default="false"
+    )
     is_active: Mapped[bool] = mapped_column(
         "activo", Boolean, nullable=False, server_default="true"
     )

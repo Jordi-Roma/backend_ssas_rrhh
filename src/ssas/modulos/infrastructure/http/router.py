@@ -54,7 +54,9 @@ async def _catalogo(session: AsyncSession) -> list[ModuloModel]:
     return list(result.scalars().all())
 
 
-async def _modulos_de_empresa(session: AsyncSession, empresa_id: str) -> list[ModuloEmpresaResponse]:
+async def _modulos_de_empresa(
+    session: AsyncSession, empresa_id: str
+) -> list[ModuloEmpresaResponse]:
     result = await session.execute(
         select(ModuloModel, EmpresaModuloModel)
         .outerjoin(
@@ -106,9 +108,7 @@ async def listar_modulos(
 )
 async def listar_modulos_de_empresa(
     empresa_id: str,
-    _user: CurrentUser = Depends(
-        require_empresa_permission("empresa:ver", "platform:modulos:ver")
-    ),
+    _user: CurrentUser = Depends(require_empresa_permission("empresa:ver", "platform:modulos:ver")),
     session: AsyncSession = Depends(get_session),
 ):
     return await _modulos_de_empresa(session, empresa_id)
@@ -136,7 +136,7 @@ async def actualizar_modulos_de_empresa(
     desconocidos = sorted(solicitados - por_codigo.keys())
     if desconocidos:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail=f"Módulos inexistentes: {', '.join(desconocidos)}",
         )
 

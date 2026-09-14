@@ -1,1 +1,0 @@
-"""Entidades de vacantes."""

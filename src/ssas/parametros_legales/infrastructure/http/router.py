@@ -78,7 +78,7 @@ def _raise_http_parametro_error(exc: ParametroLegalError) -> None:
     elif isinstance(exc, ParametroLegalOverlapError):
         code = status.HTTP_409_CONFLICT
     elif isinstance(exc, (ParametroLegalRangeError, ParametroLegalPercentError)):
-        code = status.HTTP_422_UNPROCESSABLE_ENTITY
+        code = status.HTTP_422_UNPROCESSABLE_CONTENT
     else:
         code = status.HTTP_400_BAD_REQUEST
     raise HTTPException(status_code=code, detail=str(exc)) from exc

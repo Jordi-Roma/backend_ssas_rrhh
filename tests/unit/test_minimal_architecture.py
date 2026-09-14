@@ -37,6 +37,9 @@ def test_schema_contains_only_current_scope_tables() -> None:
         "modulo",
         "empresa_modulo",
         "parametro_legal",
+        "parametro_valor",
+        "plan_suscripcion",
+        "suscripcion",
     }
 
 

@@ -84,7 +84,7 @@ def _raise_platform(exc: PlatformError) -> None:
         if isinstance(exc, PlatformNotFoundError)
         else status.HTTP_409_CONFLICT
         if isinstance(exc, PlatformConflictError)
-        else status.HTTP_422_UNPROCESSABLE_ENTITY
+        else status.HTTP_422_UNPROCESSABLE_CONTENT
     )
     raise HTTPException(status_code=code, detail=str(exc)) from exc
 

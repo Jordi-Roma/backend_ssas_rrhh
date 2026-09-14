@@ -62,7 +62,7 @@ def _raise_http_postulacion_error(exc: PostulacionError) -> None:
     elif isinstance(exc, PostulacionDuplicadaError):
         code = status.HTTP_409_CONFLICT
     elif isinstance(exc, (CvInvalidoError, EtapaInicialNoConfiguradaError)):
-        code = status.HTTP_422_UNPROCESSABLE_ENTITY
+        code = status.HTTP_422_UNPROCESSABLE_CONTENT
     elif isinstance(exc, VacanteNoDisponibleError):
         code = status.HTTP_404_NOT_FOUND
     else:

@@ -1,1 +1,0 @@
-"""Repositorios de plataforma."""
