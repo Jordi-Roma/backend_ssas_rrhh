@@ -18,7 +18,6 @@ class Settings(BaseSettings):
     app_frontend_url: str = "http://localhost:3000"
     app_cors_origins: str = (
         "http://localhost:3000,http://localhost:5173,"
-        "https://frontendssasrrhh-production.up.railway.app"
     )
     app_cors_origin_regex: str = ""
     smtp_host: str | None = None

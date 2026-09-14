@@ -66,7 +66,7 @@ async def _create(args: argparse.Namespace, password: str) -> None:
             await session.execute(
                 text(
                     "INSERT INTO usuario "
-                    "(empresa_id, nombre, apellido, email, username, password_hash, "
+                    "(empresa_id, nombres, apellidos, email, username, password_hash, "
                     " activo, email_verified, debe_cambiar_password) "
                     "VALUES (NULL, :nombre, :apellido, :email, :username, :hash, "
                     "        true, true, false) "
