@@ -32,6 +32,13 @@ class AuditLogSummarySchema(BaseModel):
 class AuditLogSchema(AuditLogSummarySchema):
     previous_data: dict[str, Any] | None = None
     new_data: dict[str, Any] | None = None
+    integrity_verified: bool | None = None
+
+
+class AuditIntegritySchema(BaseModel):
+    valid: bool
+    checked_records: int
+    first_invalid_id: str | None = None
 
 
 class AuditLogPageSchema(BaseModel):

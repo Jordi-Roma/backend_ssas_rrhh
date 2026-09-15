@@ -57,3 +57,17 @@ def test_cors_origin_regex_cubre_subdominios_railway(monkeypatch) -> None:
     assert regex.match("https://frontendssasrrhh-preview-1234.up.railway.app")
     assert regex.match("https://backendssasrrhh-production.up.railway.app")
     assert not regex.match("https://portal.example.com")
+
+
+def test_audit_key_is_required_in_production(monkeypatch) -> None:
+    import pytest
+    from pydantic import ValidationError
+
+    monkeypatch.setenv("APP_ENV", "production")
+    monkeypatch.setenv("APP_SECRET_KEY", "x" * 32)
+    monkeypatch.delenv("APP_AUDIT_ENCRYPTION_KEY", raising=False)
+
+    from ssas.config.settings import Settings
+
+    with pytest.raises(ValidationError, match="APP_AUDIT_ENCRYPTION_KEY"):
+        Settings(_env_file=None)

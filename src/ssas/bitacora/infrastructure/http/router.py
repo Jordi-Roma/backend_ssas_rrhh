@@ -1,13 +1,18 @@
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ssas.bitacora.application.dto.audit_log_filter import AuditLogFilter
 from ssas.bitacora.application.use_cases.get_audit_log import GetAuditLog
 from ssas.bitacora.application.use_cases.list_audit_logs import ListAuditLogs
 from ssas.bitacora.domain.exceptions import AuditLogNotFoundError
-from ssas.bitacora.infrastructure.http.schemas import AuditLogPageSchema, AuditLogSchema
+from ssas.bitacora.infrastructure.crypto import AuditEncryptionError
+from ssas.bitacora.infrastructure.http.schemas import (
+    AuditIntegritySchema,
+    AuditLogPageSchema,
+    AuditLogSchema,
+)
 from ssas.bitacora.infrastructure.persistence.repositories.audit_log_repository import (
     SqlAlchemyAuditLogRepository,
 )
@@ -79,6 +84,60 @@ async def list_audit_logs(
 
 
 @router.get(
+    "/integridad",
+    response_model=AuditIntegritySchema,
+    summary="Verificar integridad de la bitácora",
+    description=(
+        "Recorre la cadena de hashes del alcance autorizado y señala el primer evento "
+        "alterado o ausente, sin descifrar ni exponer su contenido."
+    ),
+)
+async def verify_audit_integrity(
+    empresa_id: str | None = Query(default=None, description=EMPRESA_SCOPE_DESCRIPTION),
+    current_user: CurrentUser = Depends(
+        require_scoped_permission("bitacora:ver_detalle", "platform:bitacora:ver_detalle")
+    ),
+    session: AsyncSession = Depends(get_session),
+):
+    valid, invalid_id, checked = await SqlAlchemyAuditLogRepository(session).verify_chain(
+        _target_empresa(current_user, empresa_id)
+    )
+    return AuditIntegritySchema(
+        valid=valid, checked_records=checked, first_invalid_id=invalid_id
+    )
+
+
+@router.get(
+    "/exportar-cifrada",
+    summary="Exportar archivo confidencial de bitácora",
+    description=(
+        "Descarga los eventos como JSON Lines con sobres AES-GCM y hashes de integridad. "
+        "El archivo no contiene la llave ni detalles en texto claro."
+    ),
+    response_class=Response,
+)
+async def export_encrypted_audit(
+    empresa_id: str | None = Query(default=None, description=EMPRESA_SCOPE_DESCRIPTION),
+    current_user: CurrentUser = Depends(
+        require_scoped_permission("bitacora:exportar", "platform:bitacora:exportar")
+    ),
+    session: AsyncSession = Depends(get_session),
+):
+    target = _target_empresa(current_user, empresa_id)
+    content = await SqlAlchemyAuditLogRepository(session).encrypted_export(
+        AuditLogFilter(empresa_id=target, page=1, per_page=200)
+    )
+    return Response(
+        content,
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": 'attachment; filename="bitacora.jsonl.enc"',
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
+@router.get(
     "/{audit_log_id}",
     response_model=AuditLogSchema,
     summary="Consultar detalle de un evento",
@@ -104,3 +163,5 @@ async def get_audit_log(
         )
     except AuditLogNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except AuditEncryptionError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

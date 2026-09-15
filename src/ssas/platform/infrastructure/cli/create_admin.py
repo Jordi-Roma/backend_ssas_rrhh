@@ -21,6 +21,10 @@ from sqlalchemy import text
 from ssas.auth.domain.exceptions import InvalidPasswordError
 from ssas.auth.domain.password_policy import validate_password
 from ssas.auth.infrastructure.security.password_hasher import Argon2PasswordHasher
+from ssas.bitacora.application.use_cases.register_audit_event import RegisterAuditEvent
+from ssas.bitacora.infrastructure.persistence.repositories.audit_log_repository import (
+    SqlAlchemyAuditLogRepository,
+)
 from ssas.infrastructure.database.session import AsyncSessionLocal
 
 ROL_SUPER_ADMIN = "SUPER_ADMIN"
@@ -86,15 +90,15 @@ async def _create(args: argparse.Namespace, password: str) -> None:
             text("INSERT INTO usuario_rol (usuario_id, rol_id) VALUES (:u, :r)"),
             {"u": usuario_id, "r": rol_id},
         )
-        await session.execute(
-            text(
-                "INSERT INTO bitacora "
-                "(empresa_id, usuario_id, actor_etiqueta, modulo, accion, nivel, descripcion, "
-                " tabla_afectada, registro_id) "
-                "VALUES (NULL, :u, :email, 'AUTH_PLATFORM', 'BOOTSTRAP', 'INFO', "
-                "        'Superadministrador inicial creado mediante CLI', 'usuario', :u)"
-            ),
-            {"u": usuario_id, "email": email},
+        await RegisterAuditEvent(SqlAlchemyAuditLogRepository(session)).execute(
+            empresa_id=None,
+            user_id=str(usuario_id),
+            actor_label=email,
+            module="AUTH_PLATFORM",
+            action="BOOTSTRAP",
+            description="Superadministrador inicial creado mediante CLI",
+            affected_table="usuario",
+            record_id=str(usuario_id),
         )
         await session.commit()
         print(f"Superadministrador creado: {email} ({usuario_id})")

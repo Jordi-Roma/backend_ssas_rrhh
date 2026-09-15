@@ -9,7 +9,11 @@ from ssas.auth.infrastructure.persistence.models.email_verification_token import
 from ssas.auth.infrastructure.persistence.models.password_reset_token import PasswordResetTokenModel
 from ssas.auth.infrastructure.persistence.models.refresh_token import RefreshTokenModel
 from ssas.auth.infrastructure.persistence.models.user import UserModel
-from ssas.bitacora.infrastructure.persistence.models.audit_log import AuditLogModel
+from ssas.bitacora.application.use_cases.register_audit_event import RegisterAuditEvent
+from ssas.bitacora.domain.entities.audit_log import AuditLog
+from ssas.bitacora.infrastructure.persistence.repositories.audit_log_repository import (
+    SqlAlchemyAuditLogRepository,
+)
 from ssas.empresas.infrastructure.persistence.models.empresa import EmpresaModel
 
 
@@ -145,22 +149,19 @@ class PlatformRepository:
         datos_nuevos: dict | None = None,
         ip_origen: str | None = None,
         user_agent: str | None = None,
-    ) -> AuditLogModel:
-        evento = AuditLogModel(
+    ) -> AuditLog:
+        del nivel  # El nivel se deriva de la acción en el caso de uso central.
+        return await RegisterAuditEvent(SqlAlchemyAuditLogRepository(self.session)).execute(
             empresa_id=None,
             user_id=admin_id,
             actor_label=actor_etiqueta,
             module=modulo,
             action=accion,
-            level=nivel,
             description=descripcion,
-            tabla_afectada=tabla_afectada,
-            registro_id=registro_id,
-            datos_previos_jsonb=datos_previos,
-            datos_nuevos_jsonb=datos_nuevos,
-            ip_origen=ip_origen,
+            affected_table=tabla_afectada,
+            record_id=registro_id,
+            previous_data=datos_previos,
+            new_data=datos_nuevos,
+            source_ip=ip_origen,
             user_agent=user_agent,
         )
-        self.session.add(evento)
-        await self.session.flush()
-        return evento

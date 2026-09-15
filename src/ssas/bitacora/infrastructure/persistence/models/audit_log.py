@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text, func
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, LargeBinary, String, Text, func
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,12 +27,12 @@ class AuditLogModel(Base):
     )
     # NULL = evento de la plataforma (reemplaza a la antigua tabla bitacora_plataforma).
     empresa_id: Mapped[str | None] = mapped_column(
-        UUID(as_uuid=False), ForeignKey("empresa.id", ondelete="CASCADE"), nullable=True
+        UUID(as_uuid=False), ForeignKey("empresa.id", ondelete="RESTRICT"), nullable=True
     )
     user_id: Mapped[str | None] = mapped_column(
         "usuario_id",
         UUID(as_uuid=False),
-        ForeignKey("usuario.id", ondelete="SET NULL"),
+        ForeignKey("usuario.id", ondelete="RESTRICT"),
         nullable=True,
     )
     actor_label: Mapped[str | None] = mapped_column("actor_etiqueta", String(150), nullable=True)
@@ -53,6 +53,11 @@ class AuditLogModel(Base):
     fecha: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
+    datos_cifrados: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    nonce_cifrado: Mapped[bytes | None] = mapped_column(LargeBinary(12), nullable=True)
+    version_cifrado: Mapped[int] = mapped_column(Integer, nullable=False, server_default="1")
+    hash_anterior: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    hash_registro: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
 
     empresa: Mapped["EmpresaModel | None"] = relationship(back_populates="bitacoras")
     user: Mapped["UserModel | None"] = relationship(back_populates="bitacoras")

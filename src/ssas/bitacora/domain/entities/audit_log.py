@@ -20,3 +20,4 @@ class AuditLog:
     new_data: dict[str, Any] | None = None
     source_ip: str | None = None
     user_agent: str | None = None
+    integrity_verified: bool | None = None

@@ -19,6 +19,10 @@ from sqlalchemy import text
 from ssas.auth.domain.exceptions import InvalidPasswordError
 from ssas.auth.domain.password_policy import validate_password
 from ssas.auth.infrastructure.security.password_hasher import Argon2PasswordHasher
+from ssas.bitacora.application.use_cases.register_audit_event import RegisterAuditEvent
+from ssas.bitacora.infrastructure.persistence.repositories.audit_log_repository import (
+    SqlAlchemyAuditLogRepository,
+)
 from ssas.infrastructure.database.base import import_all_models
 from ssas.infrastructure.database.session import AsyncSessionLocal
 
@@ -91,7 +95,7 @@ async def _cambiar_password(email: str) -> int:
         fila = (
             await session.execute(
                 text(
-                    "SELECT u.id, u.username, COALESCE(e.slug,'(plataforma)') AS ambito "
+                    "SELECT u.id, u.empresa_id, u.username, COALESCE(e.slug,'(plataforma)') AS ambito "
                     "FROM usuario u LEFT JOIN empresa e ON e.id = u.empresa_id "
                     "WHERE lower(u.email) = :e"
                 ),
@@ -125,14 +129,15 @@ async def _cambiar_password(email: str) -> int:
             ),
             {"id": fila.id},
         )
-        await session.execute(
-            text(
-                "INSERT INTO bitacora (empresa_id, usuario_id, actor_etiqueta, modulo, accion, "
-                "  nivel, descripcion, tabla_afectada, registro_id) "
-                "SELECT empresa_id, id, :email, 'AUTH', 'UPDATE', 'WARNING', "
-                "  'Contraseña restablecida por CLI', 'usuario', id FROM usuario WHERE id = :id"
-            ),
-            {"id": fila.id, "email": email},
+        await RegisterAuditEvent(SqlAlchemyAuditLogRepository(session)).execute(
+            empresa_id=str(fila.empresa_id) if fila.empresa_id else None,
+            user_id=str(fila.id),
+            actor_label=email,
+            module="AUTH",
+            action="UPDATE",
+            description="Contraseña restablecida por CLI",
+            affected_table="usuario",
+            record_id=str(fila.id),
         )
         await session.commit()
 

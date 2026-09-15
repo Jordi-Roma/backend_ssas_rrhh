@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_debug: bool = False
     app_secret_key: str
+    app_audit_encryption_key: str | None = Field(default=None, validate_default=True)
     app_algorithm: str = "HS256"
     app_access_token_expire_minutes: int = 15
     app_refresh_token_expire_days: int = 7
@@ -38,6 +39,22 @@ class Settings(BaseSettings):
     def validate_secret_key(cls, value: str, info: ValidationInfo) -> str:
         if info.data.get("app_env") == "production" and len(value) < 32:
             raise ValueError("APP_SECRET_KEY debe tener al menos 32 caracteres en producción")
+        return value
+
+    @field_validator("app_audit_encryption_key")
+    @classmethod
+    def validate_audit_key(cls, value: str | None, info: ValidationInfo) -> str | None:
+        if info.data.get("app_env") == "production" and value is None:
+            raise ValueError("APP_AUDIT_ENCRYPTION_KEY es obligatoria en producción")
+        if value is not None:
+            try:
+                decoded = bytes.fromhex(value)
+            except ValueError as exc:
+                raise ValueError("APP_AUDIT_ENCRYPTION_KEY debe ser hexadecimal") from exc
+            if len(decoded) != 32:
+                raise ValueError(
+                    "APP_AUDIT_ENCRYPTION_KEY debe contener 64 caracteres hexadecimales"
+                )
         return value
 
     @field_validator("database_url")

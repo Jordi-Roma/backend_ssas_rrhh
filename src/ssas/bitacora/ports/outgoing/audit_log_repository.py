@@ -16,3 +16,11 @@ class AuditLogRepository(ABC):
     @abstractmethod
     async def get_by_id(self, audit_log_id: str, empresa_id: str | None) -> AuditLog | None:
         raise NotImplementedError
+
+    @abstractmethod
+    async def encrypted_export(self, filters: AuditLogFilter) -> bytes:
+        raise NotImplementedError
+
+    @abstractmethod
+    async def verify_chain(self, empresa_id: str | None) -> tuple[bool, str | None, int]:
+        raise NotImplementedError
