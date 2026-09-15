@@ -261,6 +261,21 @@ class SqlAlchemyUsuarioRepository(UsuarioRepository):
         )
         return result.scalar_one() > 0
 
+    async def role_ids_include_admin(
+        self, role_ids: list[str], empresa_id: str | None
+    ) -> bool:
+        if not role_ids:
+            return False
+        result = await self.session.execute(
+            select(func.count(RoleModel.id)).where(
+                RoleModel.id.in_(set(role_ids)),
+                RoleModel.empresa_id == empresa_id,
+                RoleModel.is_active.is_(True),
+                self._admin_role_filter(empresa_id),
+            )
+        )
+        return result.scalar_one() > 0
+
     async def assign_roles(self, user_id: str, role_ids: list[str]) -> None:
         await self.session.execute(
             delete(usuario_rol_table).where(usuario_rol_table.c.usuario_id == user_id)

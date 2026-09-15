@@ -40,6 +40,8 @@ def test_schema_contains_only_current_scope_tables() -> None:
         "parametro_valor",
         "plan_suscripcion",
         "suscripcion",
+        "reporte_definicion",
+        "reporte_ejecucion",
     }
 
 
@@ -77,6 +79,7 @@ def test_openapi_is_grouped_and_describes_every_business_operation() -> None:
         "Dashboard",
         "Estado",
         "Configuración",
+        "Reportes",
     }
 
     assert {tag["name"] for tag in schema["tags"]} == expected_tags

@@ -1,6 +1,7 @@
 from ssas.usuarios.domain.entities.usuario import Usuario
 from ssas.usuarios.domain.exceptions import (
     InvalidRoleForEmpresaError,
+    LastAdminCannotBeDisabledError,
     UsuarioAlreadyExistsError,
     UsuarioNotFoundError,
     UsuarioWithoutRoleError,
@@ -51,6 +52,15 @@ class ActualizarUsuario:
                 raise UsuarioWithoutRoleError("El usuario debe tener al menos un rol asignado")
             if not await self.usuario_repository.role_ids_belong_to_empresa(role_ids, empresa_id):
                 raise InvalidRoleForEmpresaError("Uno o más roles no pertenecen a la empresa")
+            if (
+                usuario.is_active
+                and await self.usuario_repository.user_has_admin_role(user_id, empresa_id)
+                and not await self.usuario_repository.role_ids_include_admin(role_ids, empresa_id)
+                and await self.usuario_repository.count_active_admins(empresa_id) <= 1
+            ):
+                raise LastAdminCannotBeDisabledError(
+                    "No se puede retirar el rol al último administrador activo de la empresa"
+                )
 
         return await self.usuario_repository.update_usuario(
             user_id=user_id,

@@ -14,7 +14,7 @@ class UpdateRoleRequest(BaseModel):
 
 
 class AssignPermissionsRequest(BaseModel):
-    permission_ids: list[str] = Field(min_length=1)
+    permission_ids: list[str] = Field(default_factory=list)
 
 
 class PermissionSchema(BaseModel):
@@ -35,5 +35,6 @@ class RoleSchema(BaseModel):
     name: str
     codigo: str
     description: str | None = None
+    es_base: bool
     is_active: bool
     permissions: list[PermissionSchema] = Field(default_factory=list)

@@ -21,7 +21,7 @@ def test_standard_postgresql_url_is_adapted(monkeypatch) -> None:
     )
 
 
-def test_cors_defaults_incluyen_origenes_dev_y_produccion(monkeypatch) -> None:
+def test_cors_defaults_only_include_development_origins(monkeypatch) -> None:
     monkeypatch.setenv("APP_SECRET_KEY", "test-secret-key")
 
     from ssas.config.settings import Settings
@@ -29,10 +29,18 @@ def test_cors_defaults_incluyen_origenes_dev_y_produccion(monkeypatch) -> None:
     configured_settings = Settings(_env_file=None)
 
     assert "http://localhost:5173" in configured_settings.cors_origins
-    assert (
-        "https://frontendssasrrhh-production.up.railway.app"
-        in configured_settings.cors_origins
-    )
+    assert all("railway.app" not in origin for origin in configured_settings.cors_origins)
+
+
+def test_cors_production_origin_is_configurable(monkeypatch) -> None:
+    monkeypatch.setenv("APP_SECRET_KEY", "test-secret-key")
+    monkeypatch.setenv("APP_CORS_ORIGINS", "https://rrhh.example.com/")
+
+    from ssas.config.settings import Settings
+
+    configured_settings = Settings(_env_file=None)
+
+    assert configured_settings.cors_origins == ["https://rrhh.example.com"]
 
 
 def test_cors_origin_regex_cubre_subdominios_railway(monkeypatch) -> None:

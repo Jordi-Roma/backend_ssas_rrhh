@@ -48,6 +48,9 @@ async def list_audit_logs(
     ),
     module: str | None = Query(default=None, description="Filtra por módulo funcional."),
     action: str | None = Query(default=None, description="Filtra por código de acción."),
+    level: str | None = Query(default=None, description="Filtra por nivel del evento."),
+    affected_table: str | None = Query(default=None, description="Filtra por tabla afectada."),
+    record_id: str | None = Query(default=None, description="Filtra por registro afectado."),
     start_date: datetime | None = Query(
         default=None, description="Fecha y hora inicial, inclusiva."
     ),
@@ -64,6 +67,9 @@ async def list_audit_logs(
         user_id=user_id,
         module=module,
         action=action,
+        level=level,
+        affected_table=affected_table,
+        record_id=record_id,
         start_date=start_date,
         end_date=end_date,
         page=page,
@@ -85,7 +91,9 @@ async def get_audit_log(
     audit_log_id: str,
     empresa_id: str | None = Query(default=None, description=EMPRESA_SCOPE_DESCRIPTION),
     current_user: CurrentUser = Depends(
-        require_scoped_permission("bitacora:ver", "platform:bitacora:ver")
+        require_scoped_permission(
+            "bitacora:ver_detalle", "platform:bitacora:ver_detalle"
+        )
     ),
     session: AsyncSession = Depends(get_session),
 ):

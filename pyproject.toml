@@ -17,6 +17,8 @@ dependencies = [
   "python-dotenv>=1.0.1",
   "python-multipart>=0.0.9",
   "psycopg[binary]>=3.1.19",
+  "openpyxl>=3.1.5",
+  "reportlab>=4.2.0",
 ]
 
 [project.optional-dependencies]

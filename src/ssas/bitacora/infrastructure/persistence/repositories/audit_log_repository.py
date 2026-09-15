@@ -70,6 +70,12 @@ class SqlAlchemyAuditLogRepository(AuditLogRepository):
             conditions.append(AuditLogModel.module == filters.module)
         if filters.action:
             conditions.append(AuditLogModel.action == filters.action)
+        if filters.level:
+            conditions.append(AuditLogModel.level == filters.level)
+        if filters.affected_table:
+            conditions.append(AuditLogModel.tabla_afectada == filters.affected_table)
+        if filters.record_id:
+            conditions.append(AuditLogModel.registro_id == filters.record_id)
         if filters.start_date:
             conditions.append(AuditLogModel.fecha >= filters.start_date)
         if filters.end_date:

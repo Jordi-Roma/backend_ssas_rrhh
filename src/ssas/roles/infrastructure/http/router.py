@@ -26,6 +26,7 @@ from ssas.roles.application.use_cases.update_role import UpdateRole
 from ssas.roles.domain.exceptions import (
     DuplicateRoleError,
     PermissionNotFoundError,
+    ProtectedRoleError,
     RoleNotFoundError,
 )
 from ssas.roles.infrastructure.http.schemas import (
@@ -188,6 +189,8 @@ async def update_role(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except DuplicateRoleError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ProtectedRoleError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.delete(
@@ -216,6 +219,8 @@ async def delete_role(
         )
     except RoleNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ProtectedRoleError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 @router.put(
@@ -253,6 +258,8 @@ async def assign_permissions(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ProtectedRoleError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
 permisos_router = APIRouter(

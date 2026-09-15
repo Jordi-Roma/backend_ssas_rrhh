@@ -50,3 +50,16 @@ async def test_register_and_list_audit_events_are_tenant_scoped() -> None:
     assert result["total"] == 1
     assert result["items"][0].empresa_id == "empresa-a"
     assert result["items"][0].module == AuditModule.ROLES
+from ssas.bitacora.application.use_cases.register_audit_event import sanitize_audit_data
+
+
+async def test_audit_data_removes_nested_secrets() -> None:
+    result = sanitize_audit_data(
+        {"email": "user@example.com", "password": "secret", "nested": {"access_token": "jwt"}}
+    )
+
+    assert result == {
+        "email": "user@example.com",
+        "password": "[OMITIDO]",
+        "nested": {"access_token": "[OMITIDO]"},
+    }

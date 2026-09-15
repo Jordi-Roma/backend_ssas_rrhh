@@ -1,4 +1,4 @@
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -18,6 +18,7 @@ class SqlAlchemyRoleRepository:
             name=role.name,
             codigo=role.codigo,
             description=role.description,
+            es_base=role.es_base,
             is_active=role.is_active,
         )
         self.session.add(model)
@@ -76,10 +77,10 @@ class SqlAlchemyRoleRepository:
 
     async def delete(self, role_id: str) -> None:
         await self.session.execute(
-            delete(RoleModel).where(
+            update(RoleModel).where(
                 RoleModel.id == role_id,
                 RoleModel.empresa_id == self.empresa_id,
-            )
+            ).values(is_active=False)
         )
         await self.session.flush()
 
@@ -106,6 +107,7 @@ class SqlAlchemyRoleRepository:
             name=model.name,
             codigo=model.codigo,
             description=model.description,
+            es_base=model.es_base,
             is_active=model.is_active,
             permissions=[
                 PermissionRepository.to_entity(permission) for permission in model.permissions

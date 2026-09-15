@@ -16,3 +16,7 @@ class DuplicateRoleError(RoleError):
 
 class PermissionDeniedError(RoleError):
     pass
+
+
+class ProtectedRoleError(RoleError):
+    pass

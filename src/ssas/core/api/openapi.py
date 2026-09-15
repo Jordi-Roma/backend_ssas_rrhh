@@ -14,6 +14,7 @@ TAG_MODULOS = "Módulos"
 TAG_DASHBOARD = "Dashboard"
 TAG_STATUS = "Estado"
 TAG_CONFIGURACION = "Configuración"
+TAG_REPORTES = "Reportes"
 
 CONFIGURACION_DESCRIPTION = (
     "Parámetros operativos y parámetros legales de la empresa: periodos de vigencia con "

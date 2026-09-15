@@ -17,6 +17,7 @@ from ssas.core.api.openapi import (
     TAG_MODULOS,
     TAG_PORTAL_PUBLICO,
     TAG_POSTULACIONES,
+    TAG_REPORTES,
     TAG_ROLES,
     TAG_STATUS,
     TAG_USERS,
@@ -101,6 +102,10 @@ app = FastAPI(
         {
             "name": TAG_DASHBOARD,
             "description": "Resumen agregado de la pantalla de inicio según el alcance.",
+        },
+        {
+            "name": TAG_REPORTES,
+            "description": "Constructor, vista previa y exportación segura de reportes.",
         },
         {
             "name": TAG_CONFIGURACION,

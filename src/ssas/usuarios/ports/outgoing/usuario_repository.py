@@ -86,6 +86,12 @@ class UsuarioRepository(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    async def role_ids_include_admin(
+        self, role_ids: list[str], empresa_id: str | None
+    ) -> bool:
+        raise NotImplementedError
+
+    @abstractmethod
     async def assign_roles(self, user_id: str, role_ids: list[str]) -> None:
         raise NotImplementedError
 

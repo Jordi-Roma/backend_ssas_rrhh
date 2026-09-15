@@ -1,4 +1,4 @@
-from ssas.roles.domain.exceptions import DuplicateRoleError, RoleNotFoundError
+from ssas.roles.domain.exceptions import DuplicateRoleError, ProtectedRoleError, RoleNotFoundError
 
 
 class UpdateRole:
@@ -9,6 +9,8 @@ class UpdateRole:
         role = await self.repository.get_by_id(role_id)
         if not role:
             raise RoleNotFoundError("Rol no encontrado")
+        if role.es_base:
+            raise ProtectedRoleError("Los roles base del sistema no se pueden modificar")
         normalized_values = dict(values)
         name = normalized_values.get("name")
         if isinstance(name, str):
