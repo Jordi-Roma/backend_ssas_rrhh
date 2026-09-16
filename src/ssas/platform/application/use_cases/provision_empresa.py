@@ -89,26 +89,26 @@ class ProvisionEmpresa:
         explícita se habilitan todos, que es lo que espera quien da de alta una
         empresa sin pensar todavía en el alcance funcional.
         """
-        catalogo = (
+        catalogo_completo = (
             (
                 await self.session.execute(
-                    select(ModuloModel).where(
-                        ModuloModel.activo.is_(True), ModuloModel.es_core.is_(False)
-                    )
+                    select(ModuloModel).where(ModuloModel.activo.is_(True))
                 )
             )
             .scalars()
             .all()
         )
-        if not catalogo:
+        if not catalogo_completo:
             return
-        codigos = {modulo.codigo for modulo in catalogo}
+        codigos = {modulo.codigo for modulo in catalogo_completo}
         if solicitados is not None:
             desconocidos = sorted(set(solicitados) - codigos)
             if desconocidos:
                 raise PlatformConflictError(f"Módulos inexistentes: {', '.join(desconocidos)}")
         ahora = datetime.now(UTC)
-        for modulo in catalogo:
+        for modulo in catalogo_completo:
+            if modulo.es_core:
+                continue
             habilitado = solicitados is None or modulo.codigo in solicitados
             self.session.add(
                 EmpresaModuloModel(
