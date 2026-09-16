@@ -11,6 +11,7 @@ from ssas.bitacora.application.use_cases.register_audit_event import RegisterAud
 from ssas.bitacora.infrastructure.persistence.repositories.audit_log_repository import (
     SqlAlchemyAuditLogRepository,
 )
+from ssas.config.settings import settings
 from ssas.core.api.openapi import TAG_PORTAL_PUBLICO
 from ssas.core.api.request_metadata import get_client_ip
 from ssas.infrastructure.database.session import get_session
@@ -40,6 +41,7 @@ from ssas.postulaciones.infrastructure.persistence.repositories.postulacion_publ
     SqlAlchemyPostulacionPublicaRepository,
 )
 from ssas.postulaciones.infrastructure.storage.local_cv_storage import LocalCvStorage
+from ssas.suscripciones.application.policy import SubscriptionPolicy, SubscriptionPolicyError
 from ssas.vacantes.infrastructure.persistence.models.vacante import VacanteModel
 
 NivelEducativo = Literal["SECUNDARIA", "TECNICO", "LICENCIATURA", "MAESTRIA", "DOCTORADO"]
@@ -103,6 +105,13 @@ async def crear_postulacion_publica(
 ) -> PostulacionPublicaResponse:
     try:
         cv_content = await cv.read()
+        empresa_id = await session.scalar(
+            select(VacanteModel.empresa_id).where(VacanteModel.id == vacante_id)
+        )
+        if empresa_id is not None:
+            await SubscriptionPolicy(
+                session, settings.subscription_grace_days
+            ).require_storage(empresa_id, len(cv_content))
         result = await CrearPostulacionPublica(
             _repository(session),
             LocalCvStorage(),
@@ -124,9 +133,6 @@ async def crear_postulacion_publica(
                 content_type=cv.content_type,
                 content=cv_content,
             ),
-        )
-        empresa_id = await session.scalar(
-            select(VacanteModel.empresa_id).where(VacanteModel.id == vacante_id)
         )
         await _events(session).publica_creada(
             empresa_id=empresa_id,
@@ -153,6 +159,8 @@ async def crear_postulacion_publica(
             status_code=status.HTTP_409_CONFLICT,
             detail="Ya existe una postulacion para esta vacante",
         ) from exc
+    except SubscriptionPolicyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except PostulacionError as exc:
         _raise_http_postulacion_error(exc)
 

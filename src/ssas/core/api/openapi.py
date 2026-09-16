@@ -15,6 +15,8 @@ TAG_DASHBOARD = "Dashboard"
 TAG_STATUS = "Estado"
 TAG_CONFIGURACION = "Configuración"
 TAG_REPORTES = "Reportes"
+TAG_RESPALDOS = "Backup / Restore"
+TAG_SUSCRIPCIONES = "Planes y suscripciones"
 
 CONFIGURACION_DESCRIPTION = (
     "Parámetros operativos y parámetros legales de la empresa: periodos de vigencia con "

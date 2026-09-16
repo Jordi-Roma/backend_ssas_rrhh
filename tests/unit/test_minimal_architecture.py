@@ -42,13 +42,17 @@ def test_schema_contains_only_current_scope_tables() -> None:
         "suscripcion",
         "reporte_definicion",
         "reporte_ejecucion",
+        "respaldo",
+        "plan_modulo",
+        "stripe_evento",
     }
 
 
-def test_openapi_does_not_expose_deferred_modules() -> None:
+def test_openapi_exposes_saas_modules() -> None:
     paths = set(app.openapi()["paths"])
-    assert not any("planes" in path for path in paths)
-    assert not any("suscripciones" in path for path in paths)
+    assert "/api/v1/planes" in paths
+    assert "/api/v1/suscripcion" in paths
+    assert "/api/v1/webhooks/stripe" in paths
     assert not any(path.startswith("/api/v1/platform") for path in paths)
     assert "/api/v1/parametros-legales" in paths
 
@@ -80,6 +84,8 @@ def test_openapi_is_grouped_and_describes_every_business_operation() -> None:
         "Estado",
         "Configuración",
         "Reportes",
+        "Backup / Restore",
+        "Planes y suscripciones",
     }
 
     assert {tag["name"] for tag in schema["tags"]} == expected_tags

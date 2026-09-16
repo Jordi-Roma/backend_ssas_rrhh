@@ -20,12 +20,15 @@ from ssas.postulaciones.infrastructure.http.router import router as postulacione
 from ssas.postulaciones.infrastructure.http.tablero_router import router as tablero_router
 from ssas.postulantes.infrastructure.http.router import router as postulantes_router
 from ssas.reportes.infrastructure.http.router import router as reportes_router
+from ssas.respaldos.infrastructure.http.router import router as respaldos_router
 from ssas.roles.infrastructure.http.router import (
 	permisos_router,
 )
 from ssas.roles.infrastructure.http.router import (
 	router as roles_router,
 )
+from ssas.suscripciones.infrastructure.http.router import plans_router, webhook_router
+from ssas.suscripciones.infrastructure.http.router import router as suscripciones_router
 from ssas.usuarios.infrastructure.http.router import router as usuarios_router
 from ssas.vacantes.infrastructure.http.router import (
 	public_router as vacantes_public_router,
@@ -50,7 +53,11 @@ api_router.include_router(postulantes_router)
 api_router.include_router(tablero_router)
 api_router.include_router(roles_router)
 api_router.include_router(reportes_router)
+api_router.include_router(respaldos_router)
 api_router.include_router(permisos_router)
 api_router.include_router(usuarios_router)
+api_router.include_router(plans_router)
+api_router.include_router(suscripciones_router)
+api_router.include_router(webhook_router)
 api_router.include_router(vacantes_router)
 api_router.include_router(vacantes_public_router)

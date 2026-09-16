@@ -18,8 +18,10 @@ from ssas.core.api.openapi import (
     TAG_PORTAL_PUBLICO,
     TAG_POSTULACIONES,
     TAG_REPORTES,
+    TAG_RESPALDOS,
     TAG_ROLES,
     TAG_STATUS,
+    TAG_SUSCRIPCIONES,
     TAG_USERS,
     TAG_VACANTES,
 )
@@ -106,6 +108,14 @@ app = FastAPI(
         {
             "name": TAG_REPORTES,
             "description": "Constructor, vista previa y exportación segura de reportes.",
+        },
+        {
+            "name": TAG_RESPALDOS,
+            "description": "Respaldo, descarga y restauración controlada de la base de datos.",
+        },
+        {
+            "name": TAG_SUSCRIPCIONES,
+            "description": "Planes, cuotas, pagos y ciclo de suscripción SaaS por empresa.",
         },
         {
             "name": TAG_CONFIGURACION,

@@ -9,6 +9,6 @@
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3,
-    "preDeployCommand": "alembic upgrade head"
+    "preDeployCommand": "PYTHONPATH=src alembic upgrade head"
   }
 }

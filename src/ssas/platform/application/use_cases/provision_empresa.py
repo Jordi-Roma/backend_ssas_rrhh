@@ -13,6 +13,10 @@ from ssas.auth.infrastructure.persistence.models.user import UserModel
 from ssas.auth.infrastructure.security.password_hasher import Argon2PasswordHasher
 from ssas.config.settings import settings
 from ssas.empresas.infrastructure.persistence.models.empresa import EmpresaModel
+from ssas.empresas.infrastructure.persistence.models.suscripcion import (
+    PlanSuscripcionModel,
+    SuscripcionModel,
+)
 from ssas.modulos.infrastructure.persistence.models.empresa_modulo import EmpresaModuloModel
 from ssas.modulos.infrastructure.persistence.models.modulo import ModuloModel
 from ssas.platform.domain.exceptions import (
@@ -32,6 +36,7 @@ from ssas.roles.infrastructure.persistence.models.permission import PermissionMo
 from ssas.roles.infrastructure.persistence.models.role import RoleModel
 from ssas.roles.infrastructure.persistence.models.role_permission import rol_permiso_table
 from ssas.roles.infrastructure.persistence.models.user_role import usuario_rol_table
+from ssas.suscripciones.infrastructure.persistence.models.saas import PlanModuloModel
 
 ROLE_DEFINITIONS: tuple[tuple[str, str, tuple[str, ...] | None], ...] = (
     ("ADMIN_EMPRESA", "Administrador de Empresa", None),
@@ -190,7 +195,37 @@ class ProvisionEmpresa:
         empresa = EmpresaModel(**empresa_data, activo=True)
         self.session.add(empresa)
         await self.session.flush()
-        await self._habilitar_modulos(empresa.id, request.modulos)
+
+        plan_inicial = await self.session.scalar(
+            select(PlanSuscripcionModel)
+            .where(PlanSuscripcionModel.activo.is_(True))
+            .order_by(PlanSuscripcionModel.precio_mensual, PlanSuscripcionModel.nombre)
+            .limit(1)
+        )
+        if plan_inicial is None:
+            raise PlatformConflictError(
+                "No existe un plan SaaS activo para aprovisionar la empresa"
+            )
+        self.session.add(
+            SuscripcionModel(
+                empresa_id=empresa.id,
+                plan_id=plan_inicial.id,
+                estado="ACTIVA",
+                fecha_inicio=datetime.now(UTC).date(),
+            )
+        )
+        modulos_del_plan = list(
+            (
+                await self.session.execute(
+                    select(ModuloModel.codigo)
+                    .join(PlanModuloModel, PlanModuloModel.modulo_id == ModuloModel.id)
+                    .where(PlanModuloModel.plan_id == plan_inicial.id)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        await self._habilitar_modulos(empresa.id, modulos_del_plan)
         await self._crear_etapas_y_motivos_iniciales(empresa.id)
         # Un rol de empresa NUNCA puede recibir permisos de plataforma: son operaciones
         # del proveedor SaaS (crear empresas y gestionar administradores globales).

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, Numeric, String, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -19,8 +19,16 @@ class PlanSuscripcionModel(Base):
     nombre: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
     precio_mensual: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     max_empleados: Mapped[int] = mapped_column(Integer, nullable=False)
+    descripcion: Mapped[str | None] = mapped_column(Text)
+    moneda: Mapped[str] = mapped_column(String(3), nullable=False, server_default="USD")
+    max_usuarios: Mapped[int] = mapped_column(Integer, nullable=False, server_default="5")
+    max_vacantes_activas: Mapped[int] = mapped_column(Integer, nullable=False, server_default="5")
+    max_almacenamiento_mb: Mapped[int] = mapped_column(Integer, nullable=False, server_default="250")
+    stripe_price_id: Mapped[str | None] = mapped_column(String(120), unique=True)
     modulos: Mapped[dict] = mapped_column(JSONB, nullable=False, server_default="{}")
     activo: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     suscripciones: Mapped[list[SuscripcionModel]] = relationship(back_populates="plan")
 
@@ -42,6 +50,16 @@ class SuscripcionModel(Base):
     )
     fecha_fin: Mapped[date | None] = mapped_column(Date, nullable=True)
     estado: Mapped[str] = mapped_column(String(30), nullable=False, server_default="ACTIVA")
+    periodo_prueba_hasta: Mapped[date | None] = mapped_column(Date)
+    cancelar_al_fin_periodo: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+    stripe_customer_id: Mapped[str | None] = mapped_column(String(120), unique=True)
+    stripe_subscription_id: Mapped[str | None] = mapped_column(String(120), unique=True)
+    stripe_checkout_session_id: Mapped[str | None] = mapped_column(String(120), unique=True)
+    fecha_ultimo_pago: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    fecha_proximo_cobro: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    creado_por_id: Mapped[str | None] = mapped_column(UUID(as_uuid=False), ForeignKey("usuario.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     empresa = relationship("EmpresaModel", back_populates="suscripciones")
     plan: Mapped[PlanSuscripcionModel] = relationship(back_populates="suscripciones")

@@ -11,6 +11,7 @@ from ssas.bitacora.application.use_cases.register_audit_event import RegisterAud
 from ssas.bitacora.infrastructure.persistence.repositories.audit_log_repository import (
     SqlAlchemyAuditLogRepository,
 )
+from ssas.config.settings import settings
 from ssas.core.api.openapi import (
     AUTHENTICATED_RESPONSES,
     EMPRESA_SCOPE_DESCRIPTION,
@@ -23,6 +24,7 @@ from ssas.core.security.dependencies import (
     require_scoped_permission,
 )
 from ssas.infrastructure.database.session import get_session
+from ssas.suscripciones.application.policy import SubscriptionPolicy, SubscriptionPolicyError
 from ssas.usuarios.application.use_cases.activar_usuario import ActivarUsuario
 from ssas.usuarios.application.use_cases.actualizar_usuario import ActualizarUsuario
 from ssas.usuarios.application.use_cases.cambiar_password_usuario import CambiarPasswordUsuario
@@ -171,6 +173,10 @@ async def crear_usuario(
     try:
         data = request.model_dump()
         target_empresa = _target_empresa(current_user, data.pop("empresa_id", None))
+        if target_empresa is not None:
+            await SubscriptionPolicy(
+                session, settings.subscription_grace_days
+            ).require_user_capacity(target_empresa)
         user = await CrearUsuario(_repository(session), password_hasher).execute(
             empresa_id=target_empresa, **data
         )
@@ -180,6 +186,8 @@ async def crear_usuario(
             **_audit_context(http_request, current_user),
         )
         return user
+    except SubscriptionPolicyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except UsuarioError as exc:
         _raise_http_usuario_error(exc)
 
@@ -300,14 +308,21 @@ async def activar_usuario(
     session: AsyncSession = Depends(get_session),
 ):
     try:
+        target_empresa = _target_empresa(current_user, empresa_id)
+        if target_empresa is not None:
+            await SubscriptionPolicy(
+                session, settings.subscription_grace_days
+            ).require_user_capacity(target_empresa)
         user = await ActivarUsuario(_repository(session)).execute(
             user_id=usuario_id,
-            empresa_id=_target_empresa(current_user, empresa_id),
+            empresa_id=target_empresa,
         )
         await _events(session).activated(
             record_id=user.id, **_audit_context(http_request, current_user)
         )
         return user
+    except SubscriptionPolicyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except UsuarioError as exc:
         _raise_http_usuario_error(exc)
 

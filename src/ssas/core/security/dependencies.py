@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -86,6 +86,7 @@ async def get_current_user(
 
 def require_permission(required_permission: str) -> Callable:
     async def dependency(
+        request: Request,
         current_user: CurrentUser = Depends(get_current_user),
         session: AsyncSession = Depends(get_session),
     ) -> CurrentUser:
@@ -105,6 +106,24 @@ def require_permission(required_permission: str) -> Callable:
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=str(exc),
             ) from exc
+
+        is_write = request.method in {"POST", "PUT", "PATCH", "DELETE"}
+        self_service_path = request.url.path.startswith(
+            ("/api/v1/suscripcion", "/api/v1/usuarios/me")
+        )
+        if not current_user.es_plataforma and is_write and not self_service_path:
+            from ssas.config.settings import settings
+            from ssas.suscripciones.application.policy import (
+                SubscriptionPolicy,
+                SubscriptionPolicyError,
+            )
+
+            try:
+                await SubscriptionPolicy(
+                    session, settings.subscription_grace_days
+                ).require_operational(current_user.empresa_id)
+            except SubscriptionPolicyError as exc:
+                raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
         return current_user
 
     return dependency

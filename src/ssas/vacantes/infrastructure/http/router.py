@@ -7,10 +7,12 @@ from ssas.bitacora.application.use_cases.register_audit_event import RegisterAud
 from ssas.bitacora.infrastructure.persistence.repositories.audit_log_repository import (
     SqlAlchemyAuditLogRepository,
 )
+from ssas.config.settings import settings
 from ssas.core.api.openapi import EMPRESA_SCOPE_DESCRIPTION, TAG_VACANTES
 from ssas.core.api.request_metadata import get_client_ip
 from ssas.core.security.dependencies import CurrentUser, require_scoped_permission
 from ssas.infrastructure.database.session import get_session
+from ssas.suscripciones.application.policy import SubscriptionPolicy, SubscriptionPolicyError
 from ssas.vacantes.application.use_cases.gestionar_vacantes import GestionarVacantes
 from ssas.vacantes.domain.exceptions import (
     VacanteError,
@@ -228,7 +230,13 @@ async def publicar_vacante(
     session: AsyncSession = Depends(get_session),
 ):
     try:
-        vacante = await _service(session).publicar(vacante_id, _empresa(current_user, empresa_id))
+        target_empresa = _empresa(current_user, empresa_id)
+        await SubscriptionPolicy(
+            session, settings.subscription_grace_days
+        ).require_vacancy_capacity(target_empresa)
+        vacante = await _service(session).publicar(vacante_id, target_empresa)
+    except SubscriptionPolicyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except VacanteError as exc:
         _raise(exc)
     await _events(session).published(
@@ -255,7 +263,13 @@ async def reanudar_vacante(
     session: AsyncSession = Depends(get_session),
 ):
     try:
-        vacante = await _service(session).reanudar(vacante_id, _empresa(current_user, empresa_id))
+        target_empresa = _empresa(current_user, empresa_id)
+        await SubscriptionPolicy(
+            session, settings.subscription_grace_days
+        ).require_vacancy_capacity(target_empresa)
+        vacante = await _service(session).reanudar(vacante_id, target_empresa)
+    except SubscriptionPolicyError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except VacanteError as exc:
         _raise(exc)
     await _events(session).resumed(

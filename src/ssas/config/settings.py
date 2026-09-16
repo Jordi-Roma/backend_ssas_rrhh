@@ -28,6 +28,20 @@ class Settings(BaseSettings):
     smtp_from_email: str | None = None
     smtp_from_name: str = "SSAS RRHH"
     smtp_use_tls: bool = True
+    supabase_url: str | None = None
+    supabase_service_role_key: str | None = None
+    backup_storage_bucket: str = "respaldos"
+    backup_restore_enabled: bool = False
+    backup_restore_confirmation: str = "RESTAURAR BASE DE DATOS"
+    backup_files_directory: str = "uploads/cv"
+    pg_dump_path: str = "pg_dump"
+    pg_restore_path: str = "pg_restore"
+    stripe_secret_key: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_checkout_success_url: str | None = None
+    stripe_checkout_cancel_url: str | None = None
+    stripe_portal_return_url: str | None = None
+    subscription_grace_days: int = Field(default=3, ge=0, le=30)
     database_url: str = "postgresql+psycopg://user:password@localhost:5432/app_db"
     db_echo: bool = False
     db_pool_size: int = Field(default=5, ge=1)
@@ -55,6 +69,13 @@ class Settings(BaseSettings):
                 raise ValueError(
                     "APP_AUDIT_ENCRYPTION_KEY debe contener 64 caracteres hexadecimales"
                 )
+        return value
+
+    @field_validator("stripe_secret_key")
+    @classmethod
+    def validate_stripe_test_key(cls, value: str | None) -> str | None:
+        if value and not value.startswith("sk_test_"):
+            raise ValueError("STRIPE_SECRET_KEY debe ser una clave de Sandbox sk_test_...")
         return value
 
     @field_validator("database_url")

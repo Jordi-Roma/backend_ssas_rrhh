@@ -26,6 +26,7 @@ def import_all_models() -> None:
     import ssas.postulaciones.infrastructure.persistence.models.postulacion_nota
     import ssas.postulantes.infrastructure.persistence.models.postulante
     import ssas.reportes.infrastructure.persistence.models.reporte
+    import ssas.respaldos.infrastructure.persistence.models.respaldo
 
     # platform ya no define modelos propios: sus administradores son filas de
     # 'usuario' con empresa_id NULL y sus eventos filas de 'bitacora'.
@@ -33,5 +34,6 @@ def import_all_models() -> None:
     import ssas.roles.infrastructure.persistence.models.role
     import ssas.roles.infrastructure.persistence.models.role_permission
     import ssas.roles.infrastructure.persistence.models.user_role
+    import ssas.suscripciones.infrastructure.persistence.models.saas
     import ssas.vacantes.infrastructure.persistence.models.vacante
     import ssas.vacantes.infrastructure.persistence.models.vacante_habilidad  # noqa: F401
