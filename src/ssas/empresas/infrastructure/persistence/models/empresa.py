@@ -112,3 +112,4 @@ class EmpresaModel(Base):
 
 
 Index("uq_empresa_slug_ci", func.lower(EmpresaModel.slug), unique=True)
+#creacion de rama remota para el backend
