@@ -5,7 +5,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ssas.auth.application.services.auth_email_service import AuthEmailService
-from ssas.auth.domain.exceptions import EmailDeliveryError
+from ssas.auth.domain.exceptions import AuthError, EmailDeliveryError
 from ssas.auth.infrastructure.email.smtp_sender import SMTPEmailSender
 from ssas.config.settings import settings
 from ssas.core.api.openapi import AUTHENTICATED_RESPONSES, TAG_COMPANIES
@@ -162,6 +162,8 @@ async def provision_empresa(
         }
     except PlatformError as exc:
         _raise_platform(exc)
+    except AuthError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except IntegrityError as exc:
         raise HTTPException(
             status_code=409, detail="La empresa o su administrador ya existe"
