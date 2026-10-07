@@ -22,6 +22,7 @@ from ssas.config.settings import settings
 from ssas.infrastructure.database.base import Base
 from ssas.infrastructure.database.session import AsyncSessionLocal
 from ssas.postulaciones.infrastructure.storage.local_cv_storage import LocalCvStorage
+from ssas.respaldos.infrastructure.services.errors import TenantBackupError
 
 FORMAT_VERSION = 1
 DIRECT_TABLES = (
@@ -75,7 +76,7 @@ def _check_table_inventory() -> None:
     known = set(DIRECT_TABLES) | {name for name, _, _ in CHILD_TABLES} | PLATFORM_TABLES | GLOBAL_TABLES
     unknown = sorted(set(Base.metadata.tables) - known)
     if unknown:
-        raise RuntimeError(f"Tablas por empresa sin clasificar para backup: {', '.join(unknown)}")
+        raise TenantBackupError(f"Tablas por empresa sin clasificar para backup: {', '.join(unknown)}")
 
 
 async def _collect_rows(empresa_id: str) -> tuple[dict[str, list[dict[str, Any]]], str]:
@@ -88,7 +89,7 @@ async def _collect_rows(empresa_id: str) -> tuple[dict[str, list[dict[str, Any]]
             raise ValueError("Empresa no encontrada")
         schema_revision = await session.scalar(text("SELECT version_num FROM alembic_version"))
         if not schema_revision:
-            raise RuntimeError("No se pudo identificar la versión del esquema")
+            raise TenantBackupError("No se pudo identificar la versión del esquema")
         for name in DIRECT_TABLES:
             table = Base.metadata.tables[name]
             rows = await session.execute(select(table).where(table.c.empresa_id == empresa_id))
@@ -125,10 +126,10 @@ async def _collect_rows(empresa_id: str) -> tuple[dict[str, list[dict[str, Any]]
                 if parent in owned and value is not None and str(value) not in owned[parent]:
                     if parent == "usuario" and str(value) in global_users:
                         continue  # Un actor global puede referenciar la empresa.
-                    raise RuntimeError(f"Referencia ajena o ausente en {name}.{fk.parent.name}")
+                    raise TenantBackupError(f"Referencia ajena o ausente en {name}.{fk.parent.name}")
     for row in result["postulante"]:
         if row.get("cv_url") and Path(row["cv_url"]).name in other_cv_names:
-            raise RuntimeError("Un CV tiene referencias en más de una empresa")
+            raise TenantBackupError("Un CV tiene referencias en más de una empresa")
     return result, schema_revision
 
 
@@ -179,10 +180,10 @@ def _write_package(
             if not cv_url or cv_url in files_seen:
                 continue
             if not storage.owns_cv(cv_url, tracking_codes.get(str(candidate["id"]), [])):
-                raise RuntimeError("Un CV no corresponde a las postulaciones de la empresa")
+                raise TenantBackupError("Un CV no corresponde a las postulaciones de la empresa")
             source = storage.resolve_cv(cv_url)
             if source is None:
-                raise RuntimeError("Un CV referenciado por la empresa no está disponible")
+                raise TenantBackupError("Un CV referenciado por la empresa no está disponible")
             files_seen.add(cv_url)
             arcname = f"files/cv/{hashlib.sha256(cv_url.encode()).hexdigest()}{source.suffix.lower()}"
             copy = Path(temporary) / Path(arcname).name
@@ -193,7 +194,7 @@ def _write_package(
             after = _file_hash(source)
             checksum = _file_hash(copy)
             if before != after or before != checksum:
-                raise RuntimeError("Un CV cambió mientras se generaba el respaldo")
+                raise TenantBackupError("Un CV cambió mientras se generaba el respaldo")
             manifest["files"].append({
                 "cv_url": cv_url, "path": arcname, "sha256": checksum, "size": copy.stat().st_size,
             })

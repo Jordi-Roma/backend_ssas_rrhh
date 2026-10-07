@@ -20,10 +20,17 @@ from ssas.respaldos.infrastructure.persistence.models.respaldo_empresa import Re
 from ssas.respaldos.infrastructure.persistence.models.respaldo_empresa_config import (
     RespaldoEmpresaConfigModel,
 )
+from ssas.respaldos.infrastructure.services.errors import TenantBackupError
 from ssas.respaldos.infrastructure.services.r2_storage import R2BackupStorage
 from ssas.respaldos.infrastructure.services.tenant_package import create_tenant_package
 
 logger = logging.getLogger(__name__)
+
+
+def _failure_detail(exc: Exception, stage: str) -> str:
+    if isinstance(exc, TenantBackupError):
+        return f"{stage}: {exc}"
+    return f"{stage}: {type(exc).__name__}"
 
 
 def _checksum(path: Path) -> str:
@@ -146,13 +153,16 @@ async def _process(job_id: str) -> None:
             return
         empresa_id, origen, created = job.empresa_id, job.origen, job.fecha_creacion
     key = f"tenant-{origen.lower()}/{empresa_id}/{created:%Y/%m/%d}/{job_id}.tar.gz"
+    stage = "empaquetado"
     try:
         with tempfile.TemporaryDirectory(prefix="ssas-tenant-backup-") as directory:
             package = Path(directory) / f"{job_id}.tar.gz"
             await create_tenant_package(package, empresa_id)
             checksum = await asyncio.to_thread(_checksum, package)
             size = package.stat().st_size
+            stage = "subida R2"
             await asyncio.to_thread(R2BackupStorage().upload, package, key)
+        stage = "registro"
         async with AsyncSessionLocal() as session:
             job = await session.get(RespaldoEmpresaModel, job_id)
             if job is None:
@@ -166,13 +176,15 @@ async def _process(job_id: str) -> None:
             await _audit(session, job, "BACKUP_TENANT_COMPLETED")
             await session.commit()
     except Exception as exc:  # noqa: BLE001 - la frontera del worker registra fallos externos.
+        detail = _failure_detail(exc, stage)
+        logger.warning("Respaldo %s falló: %s", job_id, detail)
         async with AsyncSessionLocal() as session:
             job = await session.get(RespaldoEmpresaModel, job_id)
             if job is None:
                 return
             job.estado = "PENDIENTE" if job.intentos < 3 else "FALLIDO"
             job.fecha_finalizacion = datetime.now(UTC) if job.estado == "FALLIDO" else None
-            job.mensaje_error = type(exc).__name__  # No exponer URLs ni credenciales del SDK.
+            job.mensaje_error = detail
             await _audit(session, job, "BACKUP_TENANT_FAILED")
             await session.commit()
         if job.estado == "PENDIENTE":

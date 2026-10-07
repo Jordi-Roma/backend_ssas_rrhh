@@ -8,10 +8,21 @@ from fastapi import HTTPException
 from ssas.config.settings import settings
 from ssas.core.security.dependencies import CurrentUser
 from ssas.respaldos.infrastructure.http.tenant_router import _scope
+from ssas.respaldos.infrastructure.services.errors import TenantBackupError
+from ssas.respaldos.infrastructure.services.tenant_jobs import _failure_detail
 from ssas.respaldos.infrastructure.services.tenant_package import (
     _check_table_inventory,
     _write_package,
 )
+
+
+def test_backup_failure_details_only_include_approved_messages() -> None:
+    assert _failure_detail(TenantBackupError("Un CV no está disponible"), "empaquetado") == (
+        "empaquetado: Un CV no está disponible"
+    )
+    assert _failure_detail(RuntimeError("secret-value"), "subida R2") == (
+        "subida R2: RuntimeError"
+    )
 
 
 def test_tenant_scope_never_accepts_another_company() -> None:

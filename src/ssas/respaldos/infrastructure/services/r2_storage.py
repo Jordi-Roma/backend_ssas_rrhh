@@ -4,6 +4,7 @@ import boto3
 from botocore.config import Config
 
 from ssas.config.settings import settings
+from ssas.respaldos.infrastructure.services.errors import TenantBackupError
 
 
 class R2BackupStorage:
@@ -13,7 +14,7 @@ class R2BackupStorage:
             and settings.r2_access_key_id
             and settings.r2_secret_access_key
         ):
-            raise RuntimeError("Faltan las variables R2 del backend")
+            raise TenantBackupError("Faltan las variables R2 del backend")
         self.bucket = settings.r2_backup_bucket
         self.client = boto3.client(
             "s3",
@@ -27,7 +28,7 @@ class R2BackupStorage:
     def upload(self, path: Path, key: str) -> None:
         self.client.upload_file(str(path), self.bucket, key)
         if self.client.head_object(Bucket=self.bucket, Key=key)["ContentLength"] != path.stat().st_size:
-            raise RuntimeError("R2 no confirmó el tamaño del respaldo")
+            raise TenantBackupError("R2 no confirmó el tamaño del respaldo")
 
     def download(self, key: str, path: Path) -> None:
         self.client.download_file(self.bucket, key, str(path))
