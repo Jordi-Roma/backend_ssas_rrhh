@@ -33,6 +33,8 @@ def import_all_models() -> None:
     import ssas.postulantes.infrastructure.persistence.models.postulante_habilidad
     import ssas.reportes.infrastructure.persistence.models.reporte
     import ssas.respaldos.infrastructure.persistence.models.respaldo
+    import ssas.respaldos.infrastructure.persistence.models.respaldo_empresa
+    import ssas.respaldos.infrastructure.persistence.models.respaldo_empresa_config
 
     # platform ya no define modelos propios: sus administradores son filas de
     # 'usuario' con empresa_id NULL y sus eventos filas de 'bitacora'.

@@ -50,6 +50,10 @@ def test_schema_contains_only_current_scope_tables() -> None:
         "analisis_cv",
         "empleado",
         "postulante_habilidad",
+        "conocimiento_articulo",
+        "conocimiento_fragmento",
+        "respaldo_empresa",
+        "respaldo_empresa_config",
     }
 
 
@@ -71,7 +75,7 @@ def test_login_examples_are_valid_request_bodies() -> None:
     assert all("password" in example for example in examples)
 
 
-def test_openapi_is_grouped_and_describes_every_business_operation() -> None:
+def test_openapi_is_grouped_and_summarizes_every_business_operation() -> None:
     schema = app.openapi()
     expected_tags = {
         "Autenticación",
@@ -94,6 +98,8 @@ def test_openapi_is_grouped_and_describes_every_business_operation() -> None:
         "Selección",
         "Ayuda",
         "Importación",
+        "Chatbot",
+        "Respaldos por empresa",
     }
 
     assert {tag["name"] for tag in schema["tags"]} == expected_tags
@@ -106,8 +112,20 @@ def test_openapi_is_grouped_and_describes_every_business_operation() -> None:
             if method not in {"get", "post", "put", "patch", "delete"}:
                 continue
             assert operation.get("summary")
-            assert operation.get("description")
             assert set(operation.get("tags", [])) <= expected_tags
+
+    tenant_paths = {
+        "/api/v1/respaldos-empresa",
+        "/api/v1/respaldos-empresa/ultimo",
+        "/api/v1/respaldos-empresa/configuracion/{empresa_id}",
+        "/api/v1/respaldos-empresa/{backup_id}",
+        "/api/v1/respaldos-empresa/{backup_id}/descargar",
+    }
+    for path in tenant_paths:
+        for operation in schema["paths"][path].values():
+            if isinstance(operation, dict) and "tags" in operation:
+                assert operation.get("description")
+                assert operation["tags"] == ["Respaldos por empresa"]
 
 
 def test_openapi_explains_multitenant_scope_and_login_lock() -> None:

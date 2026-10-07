@@ -1,3 +1,4 @@
+import asyncio
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -22,6 +23,7 @@ from ssas.core.api.openapi import (
     TAG_POSTULACIONES,
     TAG_REPORTES,
     TAG_RESPALDOS,
+    TAG_RESPALDOS_EMPRESA,
     TAG_ROLES,
     TAG_STATUS,
     TAG_SUSCRIPCIONES,
@@ -32,14 +34,24 @@ from ssas.core.api.router import api_router
 from ssas.core.tenancy.middleware import EmpresaContextMiddleware
 from ssas.infrastructure.database.session import dispose_engine
 from ssas.postulaciones.domain.seleccion import SeleccionError
+from ssas.respaldos.infrastructure.services.tenant_jobs import backup_worker
 
 API_V1_PREFIX = "/api/v1"
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
-    yield
-    await dispose_engine()
+    worker = asyncio.create_task(backup_worker()) if settings.tenant_backup_enabled else None
+    try:
+        yield
+    finally:
+        if worker is not None:
+            worker.cancel()
+            try:
+                await worker
+            except asyncio.CancelledError:
+                pass
+        await dispose_engine()
 
 
 app = FastAPI(
@@ -123,6 +135,10 @@ app = FastAPI(
         {
             "name": TAG_RESPALDOS,
             "description": "Respaldo, descarga y restauración controlada de la base de datos.",
+        },
+        {
+            "name": TAG_RESPALDOS_EMPRESA,
+            "description": "Copias aisladas por empresa en almacenamiento privado R2.",
         },
         {
             "name": TAG_SUSCRIPCIONES,

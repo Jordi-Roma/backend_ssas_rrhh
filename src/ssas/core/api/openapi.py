@@ -16,6 +16,7 @@ TAG_STATUS = "Estado"
 TAG_CONFIGURACION = "Configuración"
 TAG_REPORTES = "Reportes"
 TAG_RESPALDOS = "Backup / Restore"
+TAG_RESPALDOS_EMPRESA = "Respaldos por empresa"
 TAG_SUSCRIPCIONES = "Planes y suscripciones"
 
 CONFIGURACION_DESCRIPTION = (

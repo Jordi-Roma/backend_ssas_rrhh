@@ -85,7 +85,7 @@ def _tenant(user: CurrentUser) -> str:
     return user.empresa_id
 
 
-@router.get("/articulos")
+@router.get("/articulos", description="Lista artículos de conocimiento de la empresa autenticada.")
 async def list_articles(
     user: CurrentUser = Depends(require_permission("roles:gestionar")),
     session: AsyncSession = Depends(get_session),
@@ -98,7 +98,7 @@ async def list_articles(
     return [_article(item) for item in rows]
 
 
-@router.get("/articulos/{article_id}")
+@router.get("/articulos/{article_id}", description="Consulta un artículo publicado de la empresa.")
 async def read_article(
     article_id: UUID,
     user: CurrentUser = Depends(get_current_user),
@@ -118,7 +118,7 @@ async def read_article(
     return _article(article)
 
 
-@router.post("/articulos", status_code=201)
+@router.post("/articulos", status_code=201, description="Crea e indexa un artículo de conocimiento de la empresa.")
 async def create_article(
     body: ArticleInput,
     user: CurrentUser = Depends(require_permission("roles:gestionar")),
@@ -134,7 +134,7 @@ async def create_article(
     return _article(article)
 
 
-@router.put("/articulos/{article_id}")
+@router.put("/articulos/{article_id}", description="Actualiza y reindexa un artículo de conocimiento de la empresa.")
 async def update_article(
     article_id: UUID,
     body: ArticleInput,
@@ -158,7 +158,7 @@ async def update_article(
     return _article(article)
 
 
-@router.delete("/articulos/{article_id}", status_code=204)
+@router.delete("/articulos/{article_id}", status_code=204, description="Elimina un artículo y sus fragmentos indexados.")
 async def delete_article(
     article_id: UUID,
     user: CurrentUser = Depends(require_permission("roles:gestionar")),
@@ -201,7 +201,7 @@ async def _suggestions(empresa_id: str, public_only: bool, session: AsyncSession
     return list(rows)
 
 
-@router.get("/sugerencias")
+@router.get("/sugerencias", description="Sugiere preguntas basadas en artículos publicados de la empresa.")
 async def suggestions(
     user: CurrentUser = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
@@ -211,12 +211,12 @@ async def suggestions(
     return await _suggestions(_tenant(user), False, session)
 
 
-@router.get("/publico/{slug}/sugerencias")
+@router.get("/publico/{slug}/sugerencias", description="Sugiere preguntas públicas de una empresa activa.")
 async def public_suggestions(slug: str, session: AsyncSession = Depends(get_session)):
     return await _suggestions(await _public_company(slug, session), True, session)
 
 
-@router.get("/publico/{slug}/articulos/{article_id}")
+@router.get("/publico/{slug}/articulos/{article_id}", description="Consulta un artículo público publicado por la empresa.")
 async def public_read_article(
     slug: str,
     article_id: UUID,
@@ -290,7 +290,7 @@ async def _respond(question: str, empresa_id: str, public_only: bool, session: A
     }
 
 
-@router.post("/mensajes")
+@router.post("/mensajes", description="Responde con conocimiento publicado de la empresa autenticada.")
 async def message(
     body: ChatInput,
     user: CurrentUser = Depends(get_current_user),
@@ -302,7 +302,7 @@ async def message(
     return await _respond(body.pregunta.strip(), _tenant(user), False, session)
 
 
-@router.post("/publico/{slug}/mensajes")
+@router.post("/publico/{slug}/mensajes", description="Responde con conocimiento público publicado por la empresa.")
 async def public_message(
     slug: str,
     body: ChatInput,

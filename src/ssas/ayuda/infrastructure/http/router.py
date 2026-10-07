@@ -148,7 +148,7 @@ async def _visible(user: CurrentUser, session: AsyncSession) -> list[dict]:
     ]
 
 
-@router.get("/preguntas")
+@router.get("/preguntas", description="Lista las guías de ayuda visibles para la cuenta autenticada.")
 async def preguntas(
     user: CurrentUser = Depends(get_current_user), session: AsyncSession = Depends(get_session)
 ):
@@ -160,7 +160,7 @@ async def preguntas(
     ]
 
 
-@router.post("/consultar")
+@router.post("/consultar", description="Responde una consulta usando las guías locales autorizadas.")
 async def consultar(
     question: Question,
     user: CurrentUser = Depends(get_current_user),
@@ -191,7 +191,7 @@ async def consultar(
     }
 
 
-@router.post("/articulos/{article_id}/explicar")
+@router.post("/articulos/{article_id}/explicar", description="Explica una guía visible, con IA cuando está habilitada.")
 async def explicar_articulo(
     article_id: str,
     user: CurrentUser = Depends(get_current_user),

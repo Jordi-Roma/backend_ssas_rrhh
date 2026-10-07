@@ -35,6 +35,13 @@ class Settings(BaseSettings):
     supabase_url: str | None = None
     supabase_service_role_key: str | None = None
     backup_storage_bucket: str = "respaldos"
+    r2_backup_bucket: str = "rrhh-backups"
+    r2_s3_endpoint_url: str | None = None
+    r2_access_key_id: str | None = None
+    r2_secret_access_key: SecretStr | None = None
+    r2_region: str = "auto"
+    tenant_backup_enabled: bool = False
+    tenant_backup_retention_days: int = Field(default=30, ge=1, le=365)
     backup_restore_enabled: bool = False
     backup_restore_confirmation: str = "RESTAURAR BASE DE DATOS"
     backup_files_directory: str = Field(default_factory=_default_cv_files_directory)

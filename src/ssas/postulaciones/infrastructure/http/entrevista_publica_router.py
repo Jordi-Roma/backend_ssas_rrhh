@@ -67,7 +67,11 @@ def _visible(item: EntrevistaModel) -> EntrevistaVisible:
     )
 
 
-@router.get("/{codigo}/entrevista", response_model=EntrevistaVisible)
+@router.get(
+    "/{codigo}/entrevista",
+    response_model=EntrevistaVisible,
+    description="Consulta la próxima entrevista activa mediante el código de seguimiento.",
+)
 async def consultar_entrevista(codigo: str, session: AsyncSession = Depends(get_session)):
     row = await _postulacion(session, codigo)
     if row is None or row[0].estado != "ACTIVA":
@@ -78,7 +82,11 @@ async def consultar_entrevista(codigo: str, session: AsyncSession = Depends(get_
     return _visible(item)
 
 
-@router.post("/{codigo}/entrevista/confirmar", response_model=EntrevistaVisible)
+@router.post(
+    "/{codigo}/entrevista/confirmar",
+    response_model=EntrevistaVisible,
+    description="Confirma la entrevista programada mediante el código de seguimiento.",
+)
 async def confirmar_entrevista(
     codigo: str, entrevista_id: UUID, request: Request,
     session: AsyncSession = Depends(get_session),
