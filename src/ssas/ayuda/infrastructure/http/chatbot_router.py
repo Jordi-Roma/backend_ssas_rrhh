@@ -5,10 +5,11 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ssas.ayuda.infrastructure.http.router import _limit
+from ssas.ayuda.infrastructure.http.guided_answers import guided_answer, suggested_questions
+from ssas.ayuda.infrastructure.http.router import _limit, _tokens
 from ssas.ayuda.infrastructure.persistence.models import KnowledgeArticle, KnowledgeChunk
 from ssas.ayuda.infrastructure.providers.gemini_chat_provider import (
     ChatProviderError,
@@ -179,7 +180,7 @@ async def delete_article(
 async def _public_company(slug: str, session: AsyncSession) -> str:
     company = await session.scalar(
         select(EmpresaModel).where(
-            EmpresaModel.slug == slug,
+            func.lower(EmpresaModel.slug) == slug.strip().lower(),
             EmpresaModel.activo.is_(True),
             EmpresaModel.portal_publico_activo.is_(True),
             EmpresaModel.eliminado_at.is_(None),
@@ -208,12 +209,16 @@ async def suggestions(
 ):
     if user.must_change_password:
         raise HTTPException(403, "Debes cambiar tu contrasena")
-    return await _suggestions(_tenant(user), False, session)
+    empresa_id = _tenant(user)
+    guided = await suggested_questions(False, user, session)
+    return list(dict.fromkeys(guided + await _suggestions(empresa_id, False, session)))[:8]
 
 
 @router.get("/publico/{slug}/sugerencias", description="Sugiere preguntas públicas de una empresa activa.")
 async def public_suggestions(slug: str, session: AsyncSession = Depends(get_session)):
-    return await _suggestions(await _public_company(slug, session), True, session)
+    empresa_id = await _public_company(slug, session)
+    guided = await suggested_questions(True, None, session)
+    return list(dict.fromkeys(guided + await _suggestions(empresa_id, True, session)))[:8]
 
 
 @router.get("/publico/{slug}/articulos/{article_id}", description="Consulta un artículo público publicado por la empresa.")
@@ -236,9 +241,13 @@ async def public_read_article(
     return _article(article)
 
 
-async def _respond(question: str, empresa_id: str, public_only: bool, session: AsyncSession):
+def _reject_personal_data(question: str) -> None:
     if re.search(r"[\w.+-]+@[\w.-]+\.[a-z]{2,}|\b\d{8,}\b", question, re.IGNORECASE):
         raise HTTPException(422, "No incluyas datos personales en la pregunta")
+
+
+async def _respond(question: str, empresa_id: str, public_only: bool, session: AsyncSession):
+    _reject_personal_data(question)
     stmt = (
         select(KnowledgeChunk, KnowledgeArticle)
         .join(KnowledgeArticle, KnowledgeArticle.id == KnowledgeChunk.articulo_id)
@@ -254,15 +263,14 @@ async def _respond(question: str, empresa_id: str, public_only: bool, session: A
         stmt = stmt.where(KnowledgeArticle.publico.is_(True))
     rows = (await session.execute(stmt)).all()
     if not rows:
-        return {
-            "respuesta": "No encuentro esa informacion en la base de conocimiento.",
-            "fuentes": [],
-            "sin_respuesta": True,
-        }
+        return await _article_fallback(question, empresa_id, public_only, session)
     provider = GeminiChatProvider(settings)
     try:
         query_vector = await provider.embed(question)
     except ChatProviderError as exc:
+        fallback = await _article_fallback(question, empresa_id, public_only, session)
+        if not fallback["sin_respuesta"]:
+            return fallback
         raise HTTPException(503, str(exc)) from exc
     matches = sorted(
         ((cosine(query_vector, chunk.vector), chunk, article) for chunk, article in rows),
@@ -271,22 +279,58 @@ async def _respond(question: str, empresa_id: str, public_only: bool, session: A
     )
     relevant = [item for item in matches[:3] if item[0] >= 0.58]
     if not relevant:
-        return {
-            "respuesta": "No encuentro esa informacion en la base de conocimiento.",
-            "fuentes": [],
-            "sin_respuesta": True,
-        }
+        return await _article_fallback(question, empresa_id, public_only, session)
     sources = list(dict.fromkeys((article.id, article.titulo) for _, _, article in relevant))
     try:
         answer = await provider.answer(
             question, [(article.titulo, chunk.text) for _, chunk, article in relevant]
         )
     except ChatProviderError as exc:
+        fallback = await _article_fallback(question, empresa_id, public_only, session)
+        if not fallback["sin_respuesta"]:
+            return fallback
         raise HTTPException(503, str(exc)) from exc
     return {
         "respuesta": answer,
         "fuentes": [{"id": article_id, "titulo": title} for article_id, title in sources],
         "sin_respuesta": False,
+    }
+
+
+async def _article_fallback(
+    question: str, empresa_id: str, public_only: bool, session: AsyncSession
+) -> dict:
+    stmt = select(KnowledgeArticle).where(
+        KnowledgeArticle.empresa_id == empresa_id,
+        KnowledgeArticle.publicado.is_(True),
+    )
+    if public_only:
+        stmt = stmt.where(KnowledgeArticle.publico.is_(True))
+    articles = (await session.scalars(stmt.order_by(KnowledgeArticle.titulo).limit(100))).all()
+    terms = _tokens(question) - {"como", "puedo", "hacer", "tienes", "para", "sobre", "informacion"}
+    matches = sorted(
+        (
+            (
+                len(terms & _tokens(article.titulo)) * 3
+                + len(terms & _tokens(article.contenido)),
+                article,
+            )
+            for article in articles
+        ),
+        key=lambda item: item[0],
+        reverse=True,
+    )
+    if matches and matches[0][0] >= 2:
+        article = matches[0][1]
+        return {
+            "respuesta": "Encontré un artículo relacionado. Ábrelo para consultar el contenido aprobado.",
+            "fuentes": [{"id": article.id, "titulo": article.titulo}],
+            "sin_respuesta": False,
+        }
+    return {
+        "respuesta": "No encuentro esa información en la base de conocimiento.",
+        "fuentes": [],
+        "sin_respuesta": True,
     }
 
 
@@ -299,7 +343,11 @@ async def message(
     if user.must_change_password:
         raise HTTPException(403, "Debes cambiar tu contrasena")
     _limit(user.id)
-    return await _respond(body.pregunta.strip(), _tenant(user), False, session)
+    question = body.pregunta.strip()
+    _reject_personal_data(question)
+    empresa_id = _tenant(user)
+    guided = await guided_answer(question, empresa_id, None, user, session)
+    return guided if guided is not None else await _respond(question, empresa_id, False, session)
 
 
 @router.post("/publico/{slug}/mensajes", description="Responde con conocimiento público publicado por la empresa.")
@@ -310,6 +358,8 @@ async def public_message(
     session: AsyncSession = Depends(get_session),
 ):
     _limit(f"public:{get_client_ip(request) or 'unknown'}")
-    return await _respond(
-        body.pregunta.strip(), await _public_company(slug, session), True, session
-    )
+    question = body.pregunta.strip()
+    _reject_personal_data(question)
+    empresa_id = await _public_company(slug, session)
+    guided = await guided_answer(question, empresa_id, slug, None, session)
+    return guided if guided is not None else await _respond(question, empresa_id, True, session)

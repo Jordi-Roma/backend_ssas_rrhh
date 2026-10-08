@@ -62,7 +62,10 @@ async def test_generated_answer_uses_only_selected_sources():
 async def test_empty_knowledge_does_not_call_gemini(monkeypatch):
     provider = AsyncMock()
     monkeypatch.setattr(chatbot_router, "GeminiChatProvider", provider)
-    session = SimpleNamespace(execute=AsyncMock(return_value=SimpleNamespace(all=list)))
+    session = SimpleNamespace(
+        execute=AsyncMock(return_value=SimpleNamespace(all=list)),
+        scalars=AsyncMock(return_value=SimpleNamespace(all=list)),
+    )
     answer = await _respond(
         "Como pido vacaciones?", "e3b83d1d-e5ee-4ff9-a4f6-dadf61a07504", True, session
     )
@@ -78,11 +81,40 @@ async def test_public_search_filters_company_and_private_articles():
         statements.append(statement)
         return SimpleNamespace(all=list)
 
+    async def scalars(statement):
+        statements.append(statement)
+        return SimpleNamespace(all=list)
+
     company_id = "e3b83d1d-e5ee-4ff9-a4f6-dadf61a07504"
-    await _respond("Como pido vacaciones?", company_id, True, SimpleNamespace(execute=execute))
+    await _respond(
+        "Como pido vacaciones?", company_id, True,
+        SimpleNamespace(execute=execute, scalars=scalars),
+    )
     compiled = statements[0].compile()
     assert "conocimiento_articulo.publico IS true" in str(compiled)
     assert list(compiled.params.values()).count(company_id) == 2
+    assert "conocimiento_articulo.publico IS true" in str(statements[1].compile())
+    assert company_id in statements[1].compile().params.values()
+
+
+@pytest.mark.asyncio
+async def test_published_article_remains_available_when_embedding_is_missing():
+    article = SimpleNamespace(
+        id="article-1", titulo="Política de vacaciones", contenido="Solicita vacaciones en el portal."
+    )
+    session = SimpleNamespace(
+        execute=AsyncMock(return_value=SimpleNamespace(all=list)),
+        scalars=AsyncMock(return_value=SimpleNamespace(all=lambda: [article])),
+    )
+
+    answer = await _respond("Como pido vacaciones?", "company-1", True, session)
+
+    assert answer["sin_respuesta"] is False
+    assert answer["fuentes"] == [{"id": "article-1", "titulo": "Política de vacaciones"}]
+    compiled = session.scalars.await_args.args[0].compile()
+    assert "conocimiento_articulo.publicado IS true" in str(compiled)
+    assert "conocimiento_articulo.publico IS true" in str(compiled)
+    assert "company-1" in compiled.params.values()
 
 
 @pytest.mark.asyncio
