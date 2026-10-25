@@ -54,6 +54,21 @@ def test_schema_contains_only_current_scope_tables() -> None:
         "conocimiento_fragmento",
         "respaldo_empresa",
         "respaldo_empresa_config",
+        "contrato",
+        "documento_empleado",
+        "tipo_ausencia",
+        "saldo_vacacion",
+        "solicitud_ausencia",
+        "asistencia",
+            "solicitud_correccion_asistencia",
+            "autorizacion_horas_extra",
+        "estructura_salarial",
+        "regla_salarial",
+        "periodo_nomina",
+        "boleta_pago",
+        "boleta_detalle",
+        "impuesto_empleado",
+        "haber_proporcional",
     }
 
 
@@ -100,6 +115,7 @@ def test_openapi_is_grouped_and_summarizes_every_business_operation() -> None:
         "Importación",
         "Chatbot",
         "Respaldos por empresa",
+        "Personal",
     }
 
     assert {tag["name"] for tag in schema["tags"]} == expected_tags

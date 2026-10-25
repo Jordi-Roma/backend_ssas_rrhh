@@ -1,0 +1,40 @@
+{
+  "info": {
+    "name": "SSAS RRHH - Sprint 3 backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Contratos, legajo, asistencia, ausencias y nomina. Autenticarse como usuario de empresa; los parametros legales requieren administrador global."
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{"key": "token", "value": "{{access_token}}", "type": "string"}]
+  },
+  "variable": [
+    {"key": "base_url", "value": "http://localhost:8000/api/v1"},
+    {"key": "access_token", "value": ""},
+    {"key": "empleado_id", "value": ""},
+    {"key": "periodo_id", "value": ""},
+    {"key": "solicitud_id", "value": ""},
+    {"key": "asistencia_id", "value": ""},
+    {"key": "correccion_id", "value": ""},
+    {"key": "horas_extra_id", "value": ""}
+  ],
+  "item": [
+    {"name": "Historial de contratos", "request": {"method": "GET", "url": "{{base_url}}/personal/empleados/{{empleado_id}}/contratos"}},
+    {"name": "Mi legajo", "request": {"method": "GET", "url": "{{base_url}}/personal/mi/documentos"}},
+    {"name": "Marcar entrada", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"latitud\":-17.7833,\"longitud\":-63.1821}"}, "url": "{{base_url}}/personal/mi/asistencia/entrada"}},
+    {"name": "Solicitar correccion de fichaje", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"fecha\":\"2026-09-24\",\"asistencia_id\":\"{{asistencia_id}}\",\"nueva_entrada\":\"2026-09-24T08:00:00-04:00\",\"nueva_salida\":\"2026-09-24T17:00:00-04:00\",\"motivo\":\"Olvide marcar salida\"}"}, "url": "{{base_url}}/personal/mi/asistencia/correcciones"}},
+    {"name": "Jefe resuelve correccion", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"aprobar\":true,\"observacion\":\"Verificado\"}"}, "url": "{{base_url}}/personal/asistencia/correcciones/{{correccion_id}}/decision"}},
+    {"name": "Solicitar horas extra", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"asistencia_id\":\"{{asistencia_id}}\",\"horas_solicitadas\":2,\"motivo\":\"Cierre mensual\"}"}, "url": "{{base_url}}/personal/mi/asistencia/horas-extra"}},
+    {"name": "Jefe confirma horas extra", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"aprobar\":true,\"observacion\":\"Horas verificadas\"}"}, "url": "{{base_url}}/personal/asistencia/horas-extra/{{horas_extra_id}}/jefe"}},
+    {"name": "RRHH autoriza importe", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"aprobar\":true,\"observacion\":\"Planilla revisada\",\"monto_autorizado\":120.50,\"referencia_calculo\":\"planilla-2026-09\"}"}, "url": "{{base_url}}/personal/asistencia/horas-extra/{{horas_extra_id}}/rrhh"}},
+    {"name": "RRHH calcula hora extra diurna", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"aprobar\":true,\"observacion\":\"Dia ordinario verificado\",\"calculo_automatico\":true,\"dia_no_feriado_confirmado\":true}"}, "url": "{{base_url}}/personal/asistencia/horas-extra/{{horas_extra_id}}/rrhh"}},
+    {"name": "Solicitar ausencia", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"tipo_ausencia_id\":\"REEMPLAZAR_UUID\",\"fecha_inicio\":\"2026-11-02\",\"fecha_fin\":\"2026-11-03\",\"motivo\":\"Prueba\"}"}, "url": "{{base_url}}/personal/mi/ausencias"}},
+    {"name": "Aprobar ausencia", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"aprobar\":true,\"observacion\":\"Aprobada\",\"dias_habiles_vacacion\":2}"}, "url": "{{base_url}}/personal/ausencias/{{solicitud_id}}/decision"}},
+    {"name": "Estructura salarial", "request": {"method": "GET", "url": "{{base_url}}/nomina/estructura"}},
+    {"name": "Abrir periodo", "request": {"method": "POST", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"gestion\":2026,\"mes\":9}"}, "url": "{{base_url}}/nomina/periodos"}},
+    {"name": "Registrar RC-IVA verificado", "request": {"method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"empleado_id\":\"{{empleado_id}}\",\"rc_iva_retenido\":0,\"referencia_planilla\":\"SIAT-2026-09\"}"}, "url": "{{base_url}}/nomina/periodos/{{periodo_id}}/rc-iva"}},
+    {"name": "Registrar datos para RC-IVA automatico", "request": {"method": "PUT", "header": [{"key": "Content-Type", "value": "application/json"}], "body": {"mode": "raw", "raw": "{\"empleado_id\":\"{{empleado_id}}\",\"f110_credito\":0,\"saldo_favor_anterior\":0,\"mantenimiento_valor\":0,\"saldo_siete_rg\":0,\"f110_siete_rg\":0,\"referencia_planilla\":\"F110 verificado septiembre 2026\"}"}, "url": "{{base_url}}/nomina/periodos/{{periodo_id}}/rc-iva/datos"}},
+    {"name": "Calcular periodo", "request": {"method": "POST", "url": "{{base_url}}/nomina/periodos/{{periodo_id}}/calcular"}},
+    {"name": "Mis boletas", "request": {"method": "GET", "url": "{{base_url}}/nomina/mi/boletas"}}
+  ]
+}

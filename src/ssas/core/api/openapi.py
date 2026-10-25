@@ -18,6 +18,7 @@ TAG_REPORTES = "Reportes"
 TAG_RESPALDOS = "Backup / Restore"
 TAG_RESPALDOS_EMPRESA = "Respaldos por empresa"
 TAG_SUSCRIPCIONES = "Planes y suscripciones"
+TAG_PERSONAL = "Personal"
 
 CONFIGURACION_DESCRIPTION = (
     "Parámetros operativos y parámetros legales de la empresa: periodos de vigencia con "

@@ -19,6 +19,7 @@ from ssas.core.api.openapi import (
     TAG_DASHBOARD,
     TAG_DEPARTAMENTOS,
     TAG_MODULOS,
+    TAG_PERSONAL,
     TAG_PORTAL_PUBLICO,
     TAG_POSTULACIONES,
     TAG_REPORTES,
@@ -117,6 +118,7 @@ app = FastAPI(
             "name": TAG_POSTULACIONES,
             "description": "Seguimiento y gestión de postulaciones del proceso de reclutamiento.",
         },
+        {"name": TAG_PERSONAL, "description": "Legajo, contratos, asistencia, ausencias y nomina por empresa."},
         {
             "name": TAG_MODULOS,
             "description": (

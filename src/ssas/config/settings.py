@@ -10,6 +10,11 @@ def _default_cv_files_directory() -> str:
     return str(Path(mount) / "cv") if mount else "uploads/cv"
 
 
+def _default_employee_files_directory() -> str:
+    mount = os.getenv("RAILWAY_VOLUME_MOUNT_PATH")
+    return str(Path(mount) / "employee-documents") if mount else "uploads/employee-documents"
+
+
 class Settings(BaseSettings):
     app_env: str = "development"
     app_debug: bool = False
@@ -75,6 +80,7 @@ class Settings(BaseSettings):
     ia_max_output_tokens: int = Field(default=4000, ge=500, le=16000)
     ia_max_concurrent_analyses: int = Field(default=2, ge=1, le=32)
     cv_storage_directory: str = Field(default_factory=_default_cv_files_directory)
+    employee_files_directory: str = Field(default_factory=_default_employee_files_directory)
     db_pool_recycle_seconds: int = Field(default=1800, ge=30)
 
     @field_validator("app_secret_key")

@@ -30,6 +30,11 @@ DIRECT_TABLES = (
     "postulante", "empleado", "etapa_reclutamiento", "motivo_rechazo",
     "conocimiento_articulo", "conocimiento_fragmento", "reporte_definicion",
     "reporte_ejecucion", "bitacora",
+    "contrato", "documento_empleado", "tipo_ausencia", "saldo_vacacion",
+    "solicitud_ausencia", "asistencia", "solicitud_correccion_asistencia",
+    "autorizacion_horas_extra", "estructura_salarial", "regla_salarial",
+    "periodo_nomina", "boleta_pago", "boleta_detalle",
+    "impuesto_empleado", "haber_proporcional",
 )
 CHILD_TABLES = (
     ("usuario_rol", "usuario_id", "usuario"),
@@ -197,6 +202,24 @@ def _write_package(
                 raise TenantBackupError("Un CV cambió mientras se generaba el respaldo")
             manifest["files"].append({
                 "cv_url": cv_url, "path": arcname, "sha256": checksum, "size": copy.stat().st_size,
+            })
+            staged.append((copy, arcname))
+        document_root = Path(settings.employee_files_directory).resolve()
+        for document in rows.get("documento_empleado", []):
+            source = Path(document["ruta_privada"]).resolve()
+            if not source.is_relative_to(document_root / empresa_id) or not source.is_file():
+                raise TenantBackupError("Un documento de empleado no está disponible")
+            arcname = f"files/employee-documents/{document['id']}{source.suffix.lower()}"
+            copy = Path(temporary) / f"employee-{document['id']}{source.suffix.lower()}"
+            before = _file_hash(source)
+            with source.open("rb") as original, copy.open("wb") as staged_file:
+                shutil.copyfileobj(original, staged_file, length=1024 * 1024)
+            checksum = _file_hash(copy)
+            if before != _file_hash(source) or before != checksum:
+                raise TenantBackupError("Un documento cambió mientras se generaba el respaldo")
+            manifest["files"].append({
+                "documento_id": str(document["id"]), "path": arcname,
+                "sha256": checksum, "size": copy.stat().st_size,
             })
             staged.append((copy, arcname))
         with tarfile.open(path, "w:gz") as archive:

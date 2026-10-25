@@ -75,3 +75,39 @@ def test_package_rejects_cv_without_own_tracking_code(tmp_path, monkeypatch) -> 
     }
     with pytest.raises(RuntimeError, match="no corresponde"):
         _write_package(tmp_path / "tenant.tar.gz", "company-a", rows, "20261006_0010")
+
+
+def test_package_includes_only_owned_employee_documents(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "employee_files_directory", str(tmp_path))
+    own = tmp_path / "company-a" / "employee-a"
+    own.mkdir(parents=True)
+    document = own / "contract.pdf"
+    document.write_bytes(b"private-contract")
+    other = tmp_path / "company-b" / "employee-b"
+    other.mkdir(parents=True)
+    (other / "contract.pdf").write_bytes(b"other-company")
+    rows = {
+        "postulante": [], "postulacion": [],
+        "documento_empleado": [{"id": "document-a", "ruta_privada": str(document)}],
+    }
+    package = tmp_path / "company-a.tar.gz"
+    _write_package(package, "company-a", rows, "20261024_0011")
+    with tarfile.open(package, "r:gz") as archive:
+        manifest = json.load(archive.extractfile("manifest.json"))
+        assert len(manifest["files"]) == 1
+        assert archive.extractfile(manifest["files"][0]["path"]).read() == b"private-contract"
+        assert b"other-company" not in archive.extractfile("data.json").read()
+
+
+def test_package_rejects_document_outside_tenant_directory(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(settings, "employee_files_directory", str(tmp_path))
+    other = tmp_path / "company-b" / "employee-b"
+    other.mkdir(parents=True)
+    document = other / "contract.pdf"
+    document.write_bytes(b"other-company")
+    rows = {
+        "postulante": [], "postulacion": [],
+        "documento_empleado": [{"id": "document-b", "ruta_privada": str(document)}],
+    }
+    with pytest.raises(TenantBackupError, match="documento"):
+        _write_package(tmp_path / "company-a.tar.gz", "company-a", rows, "20261024_0011")

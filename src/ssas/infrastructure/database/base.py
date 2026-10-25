@@ -7,12 +7,12 @@ class Base(DeclarativeBase):
 
 def import_all_models() -> None:
     """Carga los modelos ORM para registrar relaciones y metadata en una Base única."""
-    import ssas.ayuda.infrastructure.persistence.models
     import ssas.analisis_cv.infrastructure.persistence.models.analisis_cv
     import ssas.auth.infrastructure.persistence.models.email_verification_token
     import ssas.auth.infrastructure.persistence.models.password_reset_token
     import ssas.auth.infrastructure.persistence.models.refresh_token
     import ssas.auth.infrastructure.persistence.models.user
+    import ssas.ayuda.infrastructure.persistence.models
     import ssas.bitacora.infrastructure.persistence.models.audit_log
     import ssas.cargos.infrastructure.persistence.models.cargo
     import ssas.departamentos.infrastructure.persistence.models.departamento
@@ -25,6 +25,7 @@ def import_all_models() -> None:
     import ssas.modulos.infrastructure.persistence.models.empresa_modulo
     import ssas.modulos.infrastructure.persistence.models.modulo
     import ssas.parametros_legales.infrastructure.persistence.models.parametro_legal
+    import ssas.personal.infrastructure.persistence.models
     import ssas.postulaciones.infrastructure.persistence.models.etapa_reclutamiento
     import ssas.postulaciones.infrastructure.persistence.models.motivo_rechazo
     import ssas.postulaciones.infrastructure.persistence.models.postulacion

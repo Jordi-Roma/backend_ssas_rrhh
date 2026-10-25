@@ -19,6 +19,12 @@ from ssas.empresas.infrastructure.persistence.models.suscripcion import (
 )
 from ssas.modulos.infrastructure.persistence.models.empresa_modulo import EmpresaModuloModel
 from ssas.modulos.infrastructure.persistence.models.modulo import ModuloModel
+from ssas.personal.application.payroll import SEED_RULES
+from ssas.personal.infrastructure.persistence.models import (
+    EstructuraSalarialModel,
+    ReglaSalarialModel,
+    TipoAusenciaModel,
+)
 from ssas.platform.domain.exceptions import (
     PlatformConflictError,
     RolBasePermisoDesconocidoError,
@@ -62,6 +68,23 @@ ROLE_DEFINITIONS: tuple[tuple[str, str, tuple[str, ...] | None], ...] = (
             "postulaciones:analizar_cv",
             "postulaciones:contratar",
             "empleados:ver",
+            "personal:ver",
+            "personal:gestionar",
+            "personal:mi",
+            "asistencia:ver",
+            "asistencia:marcar",
+            "asistencia:solicitar_ajuste",
+            "asistencia:aprobar_ajuste",
+            "asistencia:autorizar_extra",
+            "asistencia:mi",
+            "ausencias:gestionar",
+            "ausencias:aprobar",
+            "ausencias:solicitar",
+            "ausencias:mi",
+            "nomina:ver",
+            "nomina:gestionar",
+            "boletas:ver",
+            "boletas:mi",
         ),
     ),
     (
@@ -89,6 +112,17 @@ ROLE_DEFINITIONS: tuple[tuple[str, str, tuple[str, ...] | None], ...] = (
         "JEFE_AREA",
         "Jefe de Área",
         (
+            "personal:mi",
+            "personal:ver_equipo",
+            "asistencia:ver_equipo",
+            "asistencia:mi",
+            "asistencia:marcar",
+            "asistencia:solicitar_ajuste",
+            "asistencia:aprobar_ajuste",
+            "ausencias:aprobar",
+            "ausencias:solicitar",
+            "ausencias:mi",
+            "boletas:mi",
             "departamentos:ver",
             "cargos:ver",
             "vacantes:ver",
@@ -99,7 +133,19 @@ ROLE_DEFINITIONS: tuple[tuple[str, str, tuple[str, ...] | None], ...] = (
             "evaluaciones:gestionar",
         ),
     ),
-    ("EMPLEADO", "Empleado", ()),
+    (
+        "EMPLEADO",
+        "Empleado",
+        (
+            "personal:mi",
+            "asistencia:marcar",
+            "asistencia:solicitar_ajuste",
+            "asistencia:mi",
+            "ausencias:solicitar",
+            "ausencias:mi",
+            "boletas:mi",
+        ),
+    ),
 )
 
 
@@ -253,6 +299,39 @@ class ProvisionEmpresa:
         )
         await self._habilitar_modulos(empresa.id, modulos_del_plan)
         await self._crear_etapas_y_motivos_iniciales(empresa.id)
+        for code, name, paid, vacation, document in (
+            ("VACACION", "Vacacion", True, True, False),
+            ("PERMISO", "Permiso", True, False, False),
+            ("LICENCIA_MEDICA", "Licencia medica", True, False, True),
+            ("SIN_GOCE", "Sin goce", False, False, False),
+        ):
+            self.session.add(
+                TipoAusenciaModel(
+                    empresa_id=empresa.id,
+                    codigo=code,
+                    nombre=name,
+                    es_remunerado=paid,
+                    descuenta_vacacion=vacation,
+                    requiere_documento=document,
+                )
+            )
+        structure = EstructuraSalarialModel(empresa_id=empresa.id, nombre="Nomina general")
+        self.session.add(structure)
+        await self.session.flush()
+        for code, name, kind, sequence, calculation, basis, parameter in SEED_RULES:
+            self.session.add(
+                ReglaSalarialModel(
+                    empresa_id=empresa.id,
+                    estructura_id=structure.id,
+                    codigo=code,
+                    nombre=name,
+                    tipo=kind,
+                    secuencia=sequence,
+                    tipo_calculo=calculation,
+                    base_calculo=basis,
+                    parametro_codigo=parameter,
+                )
+            )
         # Un rol de empresa NUNCA puede recibir permisos de plataforma: son operaciones
         # del proveedor SaaS (crear empresas y gestionar administradores globales).
         # Sin este filtro, ADMIN_EMPRESA —que se define con "todos los permisos"— se
