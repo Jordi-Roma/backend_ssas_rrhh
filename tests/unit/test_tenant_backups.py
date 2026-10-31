@@ -1,15 +1,17 @@
 import hashlib
 import json
 import tarfile
+from datetime import UTC, datetime
 
 import pytest
 from fastapi import HTTPException
+from pydantic import ValidationError
 
 from ssas.config.settings import settings
 from ssas.core.security.dependencies import CurrentUser
-from ssas.respaldos.infrastructure.http.tenant_router import _scope
+from ssas.respaldos.infrastructure.http.tenant_router import BackupConfigRequest, _scope
 from ssas.respaldos.infrastructure.services.errors import TenantBackupError
-from ssas.respaldos.infrastructure.services.tenant_jobs import _failure_detail
+from ssas.respaldos.infrastructure.services.tenant_jobs import _failure_detail, _scheduled_window
 from ssas.respaldos.infrastructure.services.tenant_package import (
     _check_table_inventory,
     _write_package,
@@ -22,6 +24,30 @@ def test_backup_failure_details_only_include_approved_messages() -> None:
     )
     assert _failure_detail(RuntimeError("secret-value"), "subida R2") == (
         "subida R2: RuntimeError"
+    )
+
+
+def test_backup_time_is_validated_and_legacy_toggle_remains_accepted() -> None:
+    assert BackupConfigRequest(auto_habilitado=False).hora_local is None
+    assert BackupConfigRequest(hora_local="23:59").hora_local == "23:59"
+    for invalid in ("24:00", "9:00", "02:60", "02:00Z"):
+        with pytest.raises(ValidationError):
+            BackupConfigRequest(hora_local=invalid)
+    with pytest.raises(ValidationError):
+        BackupConfigRequest()
+
+
+def test_schedule_uses_bolivia_day_and_waits_until_selected_minute() -> None:
+    before = datetime(2026, 10, 30, 6, 29, tzinfo=UTC)
+    due = datetime(2026, 10, 30, 6, 30, tzinfo=UTC)
+    assert _scheduled_window(before, "02:30") is None
+    assert _scheduled_window(due, "02:30") == (
+        datetime(2026, 10, 30, 4, 0, tzinfo=UTC),
+        datetime(2026, 10, 31, 4, 0, tzinfo=UTC),
+    )
+    assert _scheduled_window(datetime(2026, 10, 31, 2, 0, tzinfo=UTC), "02:30") == (
+        datetime(2026, 10, 30, 4, 0, tzinfo=UTC),
+        datetime(2026, 10, 31, 4, 0, tzinfo=UTC),
     )
 
 

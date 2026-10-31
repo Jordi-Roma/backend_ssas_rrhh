@@ -49,6 +49,7 @@ from ssas.roles.infrastructure.persistence.repositories.authorization_repository
     SqlAlchemyAuthorizationRepository,
 )
 from ssas.suscripciones.application.policy import SubscriptionPolicy, SubscriptionPolicyError
+from ssas.suscripciones.infrastructure.http.feature_guard import require_plan_feature
 from ssas.vacantes.infrastructure.persistence.models.vacante import VacanteModel
 from ssas.vacantes.infrastructure.persistence.models.vacante_habilidad import VacanteHabilidadModel
 
@@ -376,6 +377,7 @@ async def analizar(
     from ssas.analisis_cv.application.use_cases.analizar_cv import analizar_cv
 
     repository = repo(session, user, empresa_id)
+    await require_plan_feature(session, repository.empresa_id, "analisis_cv_ia")
     item = await analizar_cv(
         session,
         str(id),

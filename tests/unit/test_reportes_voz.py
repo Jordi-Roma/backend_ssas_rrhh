@@ -16,6 +16,13 @@ from ssas.reportes.infrastructure.http.router import interpretar
 from ssas.reportes.infrastructure.http.schemas import InterpretarReporteRequest
 
 
+@pytest.fixture(autouse=True)
+def enabled_plan_feature(monkeypatch):
+    monkeypatch.setattr(
+        "ssas.reportes.infrastructure.http.router.require_plan_feature", AsyncMock()
+    )
+
+
 def interpretation(**overrides) -> InterpretedReport:
     data = {
         "fuente": "postulaciones",

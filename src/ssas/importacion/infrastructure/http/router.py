@@ -33,6 +33,7 @@ from ssas.roles.infrastructure.persistence.repositories.authorization_repository
     SqlAlchemyAuthorizationRepository,
 )
 from ssas.suscripciones.application.policy import SubscriptionPolicy, SubscriptionPolicyError
+from ssas.suscripciones.infrastructure.http.feature_guard import require_plan_feature
 
 router = APIRouter(prefix="/importaciones", tags=["Importación"])
 guard = require_scoped_permission("importacion:gestionar", "platform:importacion:gestionar")
@@ -119,6 +120,7 @@ async def previsualizar(
     kind_or_404(kind)
     validate_file(archivo)
     target = _empresa(user, empresa_id)
+    await require_plan_feature(session, target, "importacion_masiva")
     await authorize_sensitive(kind, user, session)
     content = await archivo.read(1_000_001)
     try:
@@ -144,6 +146,7 @@ async def confirmar(
     kind_or_404(kind)
     validate_file(archivo)
     target = _empresa(user, empresa_id)
+    await require_plan_feature(session, target, "importacion_masiva")
     await authorize_sensitive(kind, user, session)
     content = await archivo.read(1_000_001)
     try:

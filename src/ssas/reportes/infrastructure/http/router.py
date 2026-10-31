@@ -39,6 +39,7 @@ from ssas.reportes.infrastructure.persistence.models.reporte import (
     ReporteDefinicionModel,
     ReporteEjecucionModel,
 )
+from ssas.suscripciones.infrastructure.http.feature_guard import require_plan_feature
 
 router = APIRouter(prefix="/reportes", tags=[TAG_REPORTES])
 
@@ -153,9 +154,10 @@ async def interpretar(
     user: CurrentUser = Depends(require_scoped_permission(
         "reportes:ejecutar", "platform:reportes:gestionar"
     )),
+    session: AsyncSession = Depends(get_session),
 ):
     """Interpreta texto; no envía filas ni el catálogo al proveedor de IA."""
-    _empresa(user, empresa_id)
+    await require_plan_feature(session, _empresa(user, empresa_id), "reportes_ia_voz")
     if not body.texto.strip():
         raise HTTPException(422, "Escribe una consulta para el reporte")
     try:
@@ -204,6 +206,7 @@ async def listar(empresa_id: str | None = None, user: CurrentUser = Depends(requ
 async def crear(body: CrearReporte, request: Request, empresa_id: str | None = None, user: CurrentUser = Depends(require_scoped_permission("reportes:crear", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
     """Guarda una definición validada para reutilizar columnas, filtros y orden."""
     _validate(body)
+    await require_plan_feature(session, _empresa(user, empresa_id), "reportes_avanzados")
     model = ReporteDefinicionModel(empresa_id=_empresa(user, empresa_id), usuario_id=user.id, **body.model_dump())
     session.add(model); await session.flush(); await session.refresh(model)
     await _audit(session, request, user, model.empresa_id, "CREATE", "Definición de reporte creada", model.id, {"nombre": model.nombre, "fuente": model.fuente})
@@ -215,6 +218,7 @@ async def actualizar(report_id: str, body: ActualizarReporte, empresa_id: str | 
     """Modifica o desactiva una definición perteneciente al alcance autorizado."""
     model = (await session.execute(select(ReporteDefinicionModel).where(ReporteDefinicionModel.id == report_id, ReporteDefinicionModel.empresa_id == _empresa(user, empresa_id)))).scalar_one_or_none()
     if not model: raise HTTPException(404, "Reporte no encontrado")
+    await require_plan_feature(session, model.empresa_id, "reportes_avanzados")
     for key, value in body.model_dump(exclude_unset=True).items(): setattr(model, key, value)
     _validate(ReporteConfig(fuente=model.fuente, columnas=model.columnas, filtros=model.filtros, orden=model.orden))
     await session.flush(); await session.refresh(model); return _serialize(model)
@@ -223,7 +227,9 @@ async def actualizar(report_id: str, body: ActualizarReporte, empresa_id: str | 
 @router.post("/vista-previa", response_model=VistaPrevia)
 async def vista_previa(body: ReporteConfig, empresa_id: str | None = None, page: int = Query(1, ge=1), per_page: int = Query(25, ge=1, le=100), user: CurrentUser = Depends(require_scoped_permission("reportes:ejecutar", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
     """Ejecuta una consulta limitada y devuelve una vista previa paginada."""
-    rows = await _rows(session, _empresa(user, empresa_id), body); start = (page - 1) * per_page
+    target = _empresa(user, empresa_id)
+    await require_plan_feature(session, target, "reportes_avanzados")
+    rows = await _rows(session, target, body); start = (page - 1) * per_page
     return VistaPrevia(columnas=body.columnas, items=rows[start:start + per_page], total=len(rows), page=page, per_page=per_page)
 
 
@@ -251,7 +257,9 @@ def _document(config: ReporteConfig, rows: list[dict], formato: str) -> tuple[by
 @router.post("/exportar/{formato}")
 async def exportar(formato: str, body: ReporteConfig, request: Request, empresa_id: str | None = None, user: CurrentUser = Depends(require_scoped_permission("reportes:exportar", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
     """Genera y descarga el reporte en HTML, Excel o PDF y registra la ejecución."""
-    target = _empresa(user, empresa_id); rows = await _rows(session, target, body)
+    target = _empresa(user, empresa_id)
+    await require_plan_feature(session, target, "reportes_avanzados")
+    rows = await _rows(session, target, body)
     content, media = _document(body, rows, formato)
     session.add(ReporteEjecucionModel(empresa_id=target, usuario_id=user.id, formato=formato, filtros_aplicados=[f.model_dump() for f in body.filtros], estado="COMPLETADO", cantidad_registros=len(rows), fecha_fin=datetime.now(UTC)))
     await _audit(session, request, user, target, "EXPORT", "Reporte exportado", new_data={"formato": formato, "registros": len(rows)})
@@ -264,6 +272,7 @@ async def enviar(body: EnviarReporteRequest, request: Request, empresa_id: str |
     if not all((settings.smtp_host, settings.smtp_from_email)):
         raise HTTPException(503, "El envío de correo no está configurado")
     config = ReporteConfig(**body.model_dump(exclude={"destinatarios", "formato"})); target = _empresa(user, empresa_id)
+    await require_plan_feature(session, target, "reportes_avanzados")
     rows = await _rows(session, target, config); content, media = _document(config, rows, body.formato)
     message = EmailMessage(); message["Subject"] = "Reporte SSAH RRHH"; message["From"] = settings.smtp_from_email; message["To"] = ", ".join(body.destinatarios); message.set_content("Se adjunta el reporte solicitado.")
     main, sub = media.split("/", 1); message.add_attachment(content, maintype=main, subtype=sub, filename=f"reporte.{body.formato}")

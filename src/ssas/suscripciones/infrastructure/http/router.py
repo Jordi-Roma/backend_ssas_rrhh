@@ -64,7 +64,7 @@ def _stripe_ready(webhook: bool = False) -> None:
 
 async def _plan_payload(session: AsyncSession, plan: PlanSuscripcionModel) -> dict:
     codes = (await session.execute(select(ModuloModel.codigo).join(PlanModuloModel, PlanModuloModel.modulo_id == ModuloModel.id).where(PlanModuloModel.plan_id == plan.id))).scalars().all()
-    return {"id": plan.id, "nombre": plan.nombre, "descripcion": plan.descripcion, "precio_mensual": plan.precio_mensual, "moneda": plan.moneda, "max_usuarios": plan.max_usuarios, "max_vacantes_activas": plan.max_vacantes_activas, "max_almacenamiento_mb": plan.max_almacenamiento_mb, "stripe_price_id": plan.stripe_price_id, "modulos": list(codes), "activo": plan.activo}
+    return {"id": plan.id, "nombre": plan.nombre, "descripcion": plan.descripcion, "precio_mensual": plan.precio_mensual, "moneda": plan.moneda, "max_usuarios": plan.max_usuarios, "max_vacantes_activas": plan.max_vacantes_activas, "max_almacenamiento_mb": plan.max_almacenamiento_mb, "stripe_price_id": plan.stripe_price_id, "modulos": list(codes), "funciones": plan.funciones or [], "activo": plan.activo}
 
 
 async def _subscription_payload(session: AsyncSession, item: SuscripcionModel) -> dict:
@@ -98,7 +98,7 @@ async def list_plans(include_inactive: bool = False, _user: CurrentUser = Depend
 
 @plans_router.post("", response_model=PlanResponse, status_code=201, summary="Crear plan", description="Crea un plan global con límites y módulos contratables.")
 async def create_plan(body: PlanRequest, user: CurrentUser = Depends(require_platform_permission("platform:planes:crear")), session: AsyncSession = Depends(get_session)):
-    plan = PlanSuscripcionModel(nombre=body.nombre.strip(), descripcion=body.descripcion, precio_mensual=body.precio_mensual, max_empleados=body.max_usuarios, moneda=body.moneda.upper(), max_usuarios=body.max_usuarios, max_vacantes_activas=body.max_vacantes_activas, max_almacenamiento_mb=body.max_almacenamiento_mb, stripe_price_id=body.stripe_price_id, modulos=body.modulos, activo=body.activo)
+    plan = PlanSuscripcionModel(nombre=body.nombre.strip(), descripcion=body.descripcion, precio_mensual=body.precio_mensual, max_empleados=body.max_usuarios, moneda=body.moneda.upper(), max_usuarios=body.max_usuarios, max_vacantes_activas=body.max_vacantes_activas, max_almacenamiento_mb=body.max_almacenamiento_mb, stripe_price_id=body.stripe_price_id, modulos=body.modulos, funciones=list(dict.fromkeys(body.funciones)), activo=body.activo)
     session.add(plan); await session.flush()
     ids = (await session.execute(select(ModuloModel.id).where(ModuloModel.codigo.in_(body.modulos)))).scalars().all()
     session.add_all([PlanModuloModel(plan_id=plan.id, modulo_id=i) for i in ids])
@@ -110,12 +110,14 @@ async def create_plan(body: PlanRequest, user: CurrentUser = Depends(require_pla
 async def update_plan(plan_id: str, body: PlanRequest, user: CurrentUser = Depends(require_platform_permission("platform:planes:editar")), session: AsyncSession = Depends(get_session)):
     plan = await session.get(PlanSuscripcionModel, plan_id)
     if not plan: raise HTTPException(404, "Plan no encontrado")
-    for key, value in body.model_dump(exclude={"modulos"}).items(): setattr(plan, key, value)
+    for key, value in body.model_dump(exclude={"modulos", "funciones"}).items(): setattr(plan, key, value)
     plan.max_empleados = body.max_usuarios; plan.moneda = body.moneda.upper(); plan.modulos = body.modulos
+    if "funciones" in body.model_fields_set:
+        plan.funciones = list(dict.fromkeys(body.funciones))
     await session.execute(PlanModuloModel.__table__.delete().where(PlanModuloModel.plan_id == plan.id))
     ids = (await session.execute(select(ModuloModel.id).where(ModuloModel.codigo.in_(body.modulos)))).scalars().all()
     session.add_all([PlanModuloModel(plan_id=plan.id, modulo_id=i) for i in ids])
-    await _audit(session, user.id, "PLAN_UPDATED", "Plan SaaS actualizado", plan.id, data={"nombre": plan.nombre})
+    await _audit(session, user.id, "PLAN_UPDATED", "Plan SaaS actualizado", plan.id, data={"nombre": plan.nombre, "funciones": plan.funciones})
     await session.flush(); return await _plan_payload(session, plan)
 
 

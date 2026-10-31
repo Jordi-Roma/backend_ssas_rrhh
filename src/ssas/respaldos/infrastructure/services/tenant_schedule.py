@@ -1,4 +1,4 @@
-"""Comando de Railway Cron: encola un trabajo diario por empresa y termina."""
+"""Comando de Railway Cron: revisa copias vencidas como respaldo del worker."""
 
 import asyncio
 

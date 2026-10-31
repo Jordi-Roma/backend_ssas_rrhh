@@ -6,7 +6,7 @@ from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import FileResponse
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.background import BackgroundTask
@@ -30,6 +30,10 @@ from ssas.respaldos.infrastructure.persistence.models.respaldo_empresa_config im
 )
 from ssas.respaldos.infrastructure.services.r2_storage import R2BackupStorage
 from ssas.respaldos.infrastructure.services.tenant_jobs import enqueue_backup
+from ssas.suscripciones.infrastructure.http.feature_guard import (
+    has_plan_feature,
+    require_plan_feature,
+)
 
 router = APIRouter(prefix="/respaldos-empresa", tags=[TAG_RESPALDOS_EMPRESA])
 
@@ -61,12 +65,22 @@ class LatestBackupsResponse(BaseModel):
 class BackupConfigResponse(BaseModel):
     empresa_id: str
     auto_habilitado: bool
+    hora_local: str
+    zona_horaria: str
+    hora_configurable: bool
     retencion_dias: int
     servicio_habilitado: bool
 
 
 class BackupConfigRequest(BaseModel):
-    auto_habilitado: bool
+    auto_habilitado: bool | None = None
+    hora_local: str | None = Field(default=None, pattern=r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
+
+    @model_validator(mode="after")
+    def require_change(self) -> "BackupConfigRequest":
+        if self.auto_habilitado is None and self.hora_local is None:
+            raise ValueError("Indica auto_habilitado u hora_local")
+        return self
 
 
 def _scope(user: CurrentUser, empresa_id: str | None) -> str | None:
@@ -87,9 +101,13 @@ async def get_tenant_backup_config(
     if await session.get(EmpresaModel, empresa_id) is None:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
     config = await session.get(RespaldoEmpresaConfigModel, empresa_id)
+    custom_time = await has_plan_feature(session, empresa_id, "horario_respaldo")
     return BackupConfigResponse(
         empresa_id=empresa_id,
         auto_habilitado=config.auto_habilitado if config else True,
+        hora_local=(config.hora_local if config else "02:00") if custom_time else "02:00",
+        zona_horaria="America/La_Paz",
+        hora_configurable=custom_time,
         retencion_dias=settings.tenant_backup_retention_days,
         servicio_habilitado=settings.tenant_backup_enabled,
     )
@@ -102,24 +120,35 @@ async def update_tenant_backup_config(
     user: CurrentUser = Depends(require_platform_permission("platform:backup:configurar")),
     session: AsyncSession = Depends(get_session),
 ):
-    """Activa o desactiva la programación diaria de una empresa desde plataforma."""
+    """Configura la copia diaria y su hora de Bolivia desde plataforma."""
     if await session.get(EmpresaModel, empresa_id) is None:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
+    if request.hora_local is not None:
+        await require_plan_feature(session, empresa_id, "horario_respaldo")
     config = await session.get(RespaldoEmpresaConfigModel, empresa_id)
     if config is None:
-        config = RespaldoEmpresaConfigModel(empresa_id=empresa_id)
+        config = RespaldoEmpresaConfigModel(
+            empresa_id=empresa_id, auto_habilitado=True, hora_local="02:00"
+        )
         session.add(config)
-    config.auto_habilitado = request.auto_habilitado
+    if request.auto_habilitado is not None:
+        config.auto_habilitado = request.auto_habilitado
+    if request.hora_local is not None:
+        config.hora_local = request.hora_local
     config.actualizado_en = datetime.now(UTC)
     await RegisterAuditEvent(SqlAlchemyAuditLogRepository(session)).execute(
         empresa_id=empresa_id, module="BACKUP", action="BACKUP_TENANT_CONFIG_CHANGED",
         description="Programación automática modificada", user_id=user.id,
         affected_table="respaldo_empresa_config", record_id=empresa_id,
-        new_data={"auto_habilitado": config.auto_habilitado},
+        new_data={"auto_habilitado": config.auto_habilitado, "hora_local": config.hora_local},
     )
+    custom_time = await has_plan_feature(session, empresa_id, "horario_respaldo")
     return BackupConfigResponse(
         empresa_id=empresa_id,
         auto_habilitado=config.auto_habilitado,
+        hora_local=config.hora_local if custom_time else "02:00",
+        zona_horaria="America/La_Paz",
+        hora_configurable=custom_time,
         retencion_dias=settings.tenant_backup_retention_days,
         servicio_habilitado=settings.tenant_backup_enabled,
     )

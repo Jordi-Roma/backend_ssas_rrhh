@@ -10,11 +10,21 @@ from ssas.empresas.infrastructure.persistence.models.suscripcion import (
     SuscripcionModel,
 )
 from ssas.postulantes.infrastructure.persistence.models.postulante import PostulanteModel
+from ssas.suscripciones.application.features import PlanFeature
 from ssas.vacantes.infrastructure.persistence.models.vacante import VacanteModel
 
 
 class SubscriptionPolicyError(RuntimeError):
     pass
+
+
+async def has_plan_feature(session: AsyncSession, empresa_id: str, feature: PlanFeature) -> bool:
+    features = await session.scalar(
+        select(PlanSuscripcionModel.funciones)
+        .join(SuscripcionModel, SuscripcionModel.plan_id == PlanSuscripcionModel.id)
+        .where(SuscripcionModel.empresa_id == empresa_id)
+    )
+    return feature in (features or [])
 
 
 class SubscriptionPolicy:

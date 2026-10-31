@@ -19,11 +19,16 @@ global existente en `/api/v1/respaldos` ni habilita restauracion por empresa.
   a otra empresa o falta un CV. Un paquete incompleto no queda como exitoso.
 - El worker de la API toma trabajos de PostgreSQL y lee el volumen de CV.
   El servicio Cron separado solo encola; no necesita montar el volumen.
+- La hora diaria se configura por empresa desde la plataforma, en zona
+  `America/La_Paz`. El valor inicial es `02:00`; el worker de la API revisa
+  horarios pendientes cada 30 segundos y encola una sola copia automatica por
+  dia local. Una copia fallida conserva sus reintentos normales, pero no se
+  crea otra solicitud automatica para el mismo dia.
 
 ## Activacion en Railway
 
-1. Desplegar el codigo del backend con `boto3` y aplicar la migracion
-   `20261006_0010`. Mantener `TENANT_BACKUP_ENABLED=false` hasta comprobar
+1. Desplegar el codigo del backend con `boto3` y aplicar las migraciones
+   hasta `20261030_0012`. Mantener `TENANT_BACKUP_ENABLED=false` hasta comprobar
    que la migracion y el volumen de CV estan disponibles.
 2. En las variables privadas del **servicio backend**, configurar
    `R2_BACKUP_BUCKET=rrhh-backups`, `R2_S3_ENDPOINT_URL` (endpoint S3 Default
@@ -49,9 +54,13 @@ global existente en `/api/v1/respaldos` ni habilita restauracion por empresa.
    mismas claves de aplicacion y auditoria del backend mediante variables
    privadas o referencias de Railway. No copiar claves R2 ni montar el
    volumen de CV: el Cron solo encola trabajos; la API los procesa.
-6. En Settings > Cron Schedule, activar `0 6 * * *` (06:00 UTC, 02:00 en
-   Bolivia). Comprobar que cada ejecucion termina y, en el historial de la
-   API, que aparece una copia automatica completa por empresa habilitada.
+6. El Cron existente `0 6 * * *` puede permanecer como comprobacion diaria,
+   pero **ya no define la hora de las copias**. No hace falta modificar su
+   horario al cambiar la hora de una empresa. El backend debe permanecer
+   activo con `TENANT_BACKUP_ENABLED=true` para revisar la programacion.
+   Tras desplegar la migracion `20261030_0012`, elegir la hora desde
+   Respaldos por empresa > Programacion automatica y comprobar en el historial
+   que la copia se crea una vez en el dia local previsto.
 7. Verificar dos empresas con datos y CV distintos, permisos cruzados,
    fallo de R2/archivo, retencion de 30 dias y preservacion de la ultima copia
    valida. Medir el uso y configurar alertas de presupuesto en Cloudflare.
@@ -65,4 +74,6 @@ La restauracion aislada queda **deshabilitada**: requiere previsualizacion,
 respaldo previo y una prueba de ida y vuelta que demuestre que otra empresa
 permanece intacta. No usar el endpoint de restauracion global para una empresa.
 
-No se ejecutaron pruebas ni despliegue como parte de esta entrega.
+La migracion y la programacion nueva deben probarse antes de desplegarse en
+produccion. Cambiar la hora despues de que ya se creo la copia automatica de
+ese dia no genera una segunda copia: el cambio aplica desde el dia siguiente.

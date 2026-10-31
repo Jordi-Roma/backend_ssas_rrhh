@@ -2,11 +2,12 @@ import asyncio
 import hashlib
 import logging
 import tempfile
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, time, timedelta
 from pathlib import Path
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
-from sqlalchemy import or_, select, update
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from ssas.bitacora.application.use_cases.register_audit_event import RegisterAuditEvent
@@ -23,8 +24,11 @@ from ssas.respaldos.infrastructure.persistence.models.respaldo_empresa_config im
 from ssas.respaldos.infrastructure.services.errors import TenantBackupError
 from ssas.respaldos.infrastructure.services.r2_storage import R2BackupStorage
 from ssas.respaldos.infrastructure.services.tenant_package import create_tenant_package
+from ssas.suscripciones.application.policy import has_plan_feature
 
 logger = logging.getLogger(__name__)
+BACKUP_ZONE = ZoneInfo("America/La_Paz")
+DEFAULT_BACKUP_TIME = "02:00"
 
 
 def _failure_detail(exc: Exception, stage: str) -> str:
@@ -82,41 +86,72 @@ async def enqueue_backup(empresa_id: str, origen: str, actor_id: str | None) -> 
         raise ValueError("Ya hay un respaldo de esta empresa en curso") from exc
 
 
-async def schedule_daily_backups() -> int:
+def _scheduled_window(now: datetime, hour: str) -> tuple[datetime, datetime] | None:
+    local = now.astimezone(BACKUP_ZONE)
+    scheduled = time.fromisoformat(hour)
+    if local.time() < scheduled:
+        return None
+    start = datetime.combine(local.date(), time.min, BACKUP_ZONE)
+    end = start + timedelta(days=1)
+    return start.astimezone(UTC), end.astimezone(UTC)
+
+
+async def schedule_daily_backups(now: datetime | None = None) -> int:
     if not settings.tenant_backup_enabled:
-        raise RuntimeError("TENANT_BACKUP_ENABLED debe ser true para el Cron")
-    start = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
+        raise RuntimeError("TENANT_BACKUP_ENABLED debe ser true para programar respaldos")
+    now = now or datetime.now(UTC)
     queued = 0
     async with AsyncSessionLocal() as session:
         company_ids = (await session.execute(
-            select(EmpresaModel.id).outerjoin(
-                RespaldoEmpresaConfigModel,
-                RespaldoEmpresaConfigModel.empresa_id == EmpresaModel.id,
-            ).where(
+            select(EmpresaModel.id).where(
                 EmpresaModel.activo.is_(True), EmpresaModel.eliminado_at.is_(None),
-                or_(
-                    RespaldoEmpresaConfigModel.empresa_id.is_(None),
-                    RespaldoEmpresaConfigModel.auto_habilitado.is_(True),
-                ),
             )
         )).scalars().all()
     for empresa_id in company_ids:
-        async with AsyncSessionLocal() as session:
-            previous = await session.scalar(
-                select(RespaldoEmpresaModel.id).where(
+        try:
+            async with AsyncSessionLocal() as session, session.begin():
+                # Serializa los planificadores de distintas replicas sobre la misma empresa.
+                company = await session.scalar(
+                    select(EmpresaModel).where(
+                        EmpresaModel.id == empresa_id,
+                        EmpresaModel.activo.is_(True),
+                        EmpresaModel.eliminado_at.is_(None),
+                    ).with_for_update(skip_locked=True)
+                )
+                if company is None:
+                    continue
+                config = await session.get(RespaldoEmpresaConfigModel, empresa_id)
+                if config is not None and not config.auto_habilitado:
+                    continue
+                custom_time = await has_plan_feature(session, empresa_id, "horario_respaldo")
+                window = _scheduled_window(
+                    now, config.hora_local if config and custom_time else DEFAULT_BACKUP_TIME
+                )
+                if window is None:
+                    continue
+                previous = await session.scalar(select(RespaldoEmpresaModel.id).where(
                     RespaldoEmpresaModel.empresa_id == empresa_id,
                     RespaldoEmpresaModel.origen == "AUTO",
-                    RespaldoEmpresaModel.fecha_creacion >= start,
-                    RespaldoEmpresaModel.estado.in_(("PENDIENTE", "PROCESANDO", "COMPLETADO")),
-                ).limit(1)
-            )
-        if previous:
-            continue
-        try:
-            await enqueue_backup(empresa_id, "AUTO", None)
+                    RespaldoEmpresaModel.fecha_creacion >= window[0],
+                    RespaldoEmpresaModel.fecha_creacion < window[1],
+                ).limit(1))
+                if previous:
+                    continue
+                pending = await session.scalar(select(RespaldoEmpresaModel.id).where(
+                    RespaldoEmpresaModel.empresa_id == empresa_id,
+                    RespaldoEmpresaModel.estado.in_(("PENDIENTE", "PROCESANDO")),
+                ).limit(1))
+                if pending:
+                    continue
+                job = RespaldoEmpresaModel(
+                    id=str(uuid4()), empresa_id=empresa_id, origen="AUTO",
+                    estado="PENDIENTE", creado_por_id=None, fecha_creacion=now,
+                )
+                session.add(job)
+                await _audit(session, job, "BACKUP_TENANT_REQUESTED")
             queued += 1
-        except ValueError:
-            continue  # Ya hay trabajo en curso o la empresa cambió de estado.
+        except IntegrityError:
+            continue  # Una solicitud manual gano la carrera por el indice de trabajo activo.
     return queued
 
 
@@ -218,8 +253,12 @@ async def expire_old_backups() -> None:
 
 async def backup_worker() -> None:
     cleanup_at = datetime.now(UTC)
+    schedule_at = datetime.now(UTC)
     while True:
         try:
+            if datetime.now(UTC) >= schedule_at:
+                schedule_at = datetime.now(UTC) + timedelta(seconds=30)
+                await schedule_daily_backups()
             job_id = await _claim()
             if job_id:
                 await _process(job_id)

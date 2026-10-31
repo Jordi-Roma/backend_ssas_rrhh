@@ -4,6 +4,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from ssas.suscripciones.application.features import PlanFeature
+
 
 class PlanRequest(BaseModel):
     nombre: str = Field(min_length=2, max_length=120)
@@ -15,6 +17,7 @@ class PlanRequest(BaseModel):
     max_almacenamiento_mb: int = Field(ge=1, le=1000000)
     stripe_price_id: str | None = Field(default=None, max_length=120)
     modulos: list[str] = Field(default_factory=list)
+    funciones: list[PlanFeature] = Field(default_factory=list)
     activo: bool = True
 
 
