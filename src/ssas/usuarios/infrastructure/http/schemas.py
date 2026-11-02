@@ -1,6 +1,35 @@
-from datetime import datetime
+from datetime import date, datetime
+from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+
+
+class NuevaFichaEmpleado(BaseModel):
+    codigo: str = Field(min_length=1, max_length=40)
+    nombres: str = Field(min_length=1, max_length=120)
+    apellido_paterno: str = Field(min_length=1, max_length=120)
+    apellido_materno: str | None = Field(default=None, max_length=120)
+    ci: str = Field(min_length=1, max_length=30)
+    ci_expedido: str = Field(min_length=1, max_length=10)
+    fecha_ingreso: date
+
+
+class VinculoEmpleadoRequest(BaseModel):
+    empleado_id: str | None = None
+    nueva_ficha: NuevaFichaEmpleado | None = None
+
+    @field_validator("empleado_id")
+    @classmethod
+    def valid_employee_id(cls, value: str | None) -> str | None:
+        if value is not None:
+            UUID(value)
+        return value
+
+    @model_validator(mode="after")
+    def exactly_one_option(self) -> "VinculoEmpleadoRequest":
+        if (self.empleado_id is None) == (self.nueva_ficha is None):
+            raise ValueError("Elige una ficha existente o completa una ficha nueva")
+        return self
 
 
 class CrearUsuarioRequest(BaseModel):
@@ -12,6 +41,7 @@ class CrearUsuarioRequest(BaseModel):
     password: str = Field(min_length=12, max_length=72)
     telefono: str | None = Field(default=None, max_length=40)
     role_ids: list[str] = Field(min_length=1)
+    ficha_empleado: VinculoEmpleadoRequest | None = None
     email_verificado: bool = Field(
         default=True,
         description=(
@@ -29,6 +59,7 @@ class ActualizarUsuarioRequest(BaseModel):
     username: str | None = Field(default=None, min_length=3, max_length=80)
     telefono: str | None = Field(default=None, max_length=40)
     role_ids: list[str] | None = None
+    ficha_empleado: VinculoEmpleadoRequest | None = None
 
 
 class ActualizarMiPerfilRequest(BaseModel):

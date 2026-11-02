@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ssas.auth.domain.exceptions import AuthError
@@ -23,6 +24,7 @@ from ssas.core.security.dependencies import (
     get_current_user,
     require_scoped_permission,
 )
+from ssas.empleados.infrastructure.persistence.models.empleado import EmpleadoModel
 from ssas.infrastructure.database.session import get_session
 from ssas.suscripciones.application.policy import SubscriptionPolicy, SubscriptionPolicyError
 from ssas.usuarios.application.use_cases.activar_usuario import ActivarUsuario
@@ -57,6 +59,7 @@ from ssas.usuarios.infrastructure.http.schemas import (
 from ssas.usuarios.infrastructure.persistence.repositories.usuario_repository import (
     SqlAlchemyUsuarioRepository,
 )
+from ssas.usuarios.infrastructure.services.empleado_vinculo import vincular_empleado
 
 router = APIRouter(prefix="/usuarios", tags=[TAG_USERS], responses=AUTHENTICATED_RESPONSES)
 password_hasher = Argon2PasswordHasher()
@@ -172,6 +175,8 @@ async def crear_usuario(
 ):
     try:
         data = request.model_dump()
+        ficha_empleado = request.ficha_empleado
+        data.pop("ficha_empleado", None)
         target_empresa = _target_empresa(current_user, data.pop("empresa_id", None))
         if target_empresa is not None:
             await SubscriptionPolicy(
@@ -180,6 +185,8 @@ async def crear_usuario(
         user = await CrearUsuario(_repository(session), password_hasher).execute(
             empresa_id=target_empresa, **data
         )
+        if ficha_empleado is not None:
+            await vincular_empleado(session, target_empresa, user.id, request.role_ids, ficha_empleado)
         await _events(session).created(
             record_id=user.id,
             new_data={"email": user.email, "username": user.username},
@@ -271,13 +278,20 @@ async def actualizar_usuario(
 ):
     try:
         data = request.model_dump(exclude_unset=True)
+        ficha_empleado = request.ficha_empleado
+        data.pop("ficha_empleado", None)
         role_ids = data.pop("role_ids", None)
+        target_empresa = _target_empresa(current_user, empresa_id)
         user = await ActualizarUsuario(_repository(session)).execute(
             user_id=usuario_id,
-            empresa_id=_target_empresa(current_user, empresa_id),
+            empresa_id=target_empresa,
             values=data,
             role_ids=role_ids,
         )
+        if ficha_empleado is not None:
+            if role_ids is None:
+                raise HTTPException(422, "Envía los roles al vincular una ficha de empleado")
+            await vincular_empleado(session, target_empresa, user.id, role_ids, ficha_empleado)
         await _events(session).updated(
             record_id=user.id,
             new_data=data,
@@ -286,6 +300,30 @@ async def actualizar_usuario(
         return user
     except UsuarioError as exc:
         _raise_http_usuario_error(exc)
+
+
+@router.get("/{usuario_id}/ficha-empleado", summary="Consultar ficha vinculada a un usuario")
+async def obtener_ficha_empleado_usuario(
+    usuario_id: str,
+    empresa_id: str | None = Query(default=None, description=EMPRESA_SCOPE_DESCRIPTION),
+    current_user: CurrentUser = Depends(
+        require_scoped_permission("usuarios:ver", "platform:usuarios:gestionar")
+    ),
+    session: AsyncSession = Depends(get_session),
+):
+    target_empresa = _target_empresa(current_user, empresa_id)
+    if target_empresa is None:
+        raise HTTPException(422, "Selecciona una empresa")
+    try:
+        usuario = await ObtenerUsuario(_repository(session)).execute(
+            user_id=usuario_id, empresa_id=target_empresa,
+        )
+    except UsuarioError as exc:
+        _raise_http_usuario_error(exc)
+    empleado_id = await session.scalar(select(EmpleadoModel.id).where(
+        EmpleadoModel.usuario_id == usuario.id, EmpleadoModel.empresa_id == target_empresa,
+    ))
+    return {"empleado_id": empleado_id}
 
 
 @router.patch(
