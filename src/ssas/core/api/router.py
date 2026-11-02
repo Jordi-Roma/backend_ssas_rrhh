@@ -22,6 +22,7 @@ from ssas.personal.infrastructure.http.attendance_adjustments_router import (
     router as attendance_adjustments_router,
 )
 from ssas.personal.infrastructure.http.payroll_router import router as payroll_router
+from ssas.personal.infrastructure.http.mobile_read_router import router as mobile_read_router
 from ssas.personal.infrastructure.http.router import router as personal_router
 from ssas.platform.infrastructure.http.router import router as platform_router
 from ssas.postulaciones.infrastructure.http.entrevista_publica_router import (
@@ -65,6 +66,7 @@ api_router.include_router(modulos_empresa_router)
 api_router.include_router(platform_router)
 api_router.include_router(parametros_legales_router)
 api_router.include_router(personal_router)
+api_router.include_router(mobile_read_router)
 api_router.include_router(attendance_adjustments_router)
 api_router.include_router(payroll_router)
 api_router.include_router(postulaciones_router)
