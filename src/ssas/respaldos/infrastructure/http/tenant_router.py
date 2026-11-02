@@ -19,7 +19,7 @@ from ssas.config.settings import settings
 from ssas.core.api.openapi import TAG_RESPALDOS_EMPRESA
 from ssas.core.security.dependencies import (
     CurrentUser,
-    require_platform_permission,
+    require_empresa_permission,
     require_scoped_permission,
 )
 from ssas.empresas.infrastructure.persistence.models.empresa import EmpresaModel
@@ -94,7 +94,7 @@ def _scope(user: CurrentUser, empresa_id: str | None) -> str | None:
 @router.get("/configuracion/{empresa_id}", response_model=BackupConfigResponse)
 async def get_tenant_backup_config(
     empresa_id: str,
-    _user: CurrentUser = Depends(require_platform_permission("platform:backup:ver")),
+    user: CurrentUser = Depends(require_empresa_permission("backup:configurar", "platform:backup:ver")),
     session: AsyncSession = Depends(get_session),
 ):
     """Consulta si la copia diaria está habilitada para la empresa indicada."""
@@ -117,10 +117,12 @@ async def get_tenant_backup_config(
 async def update_tenant_backup_config(
     empresa_id: str,
     request: BackupConfigRequest,
-    user: CurrentUser = Depends(require_platform_permission("platform:backup:configurar")),
+    user: CurrentUser = Depends(require_empresa_permission("backup:configurar", "platform:backup:configurar")),
     session: AsyncSession = Depends(get_session),
 ):
-    """Configura la copia diaria y su hora de Bolivia desde plataforma."""
+    """Plataforma configura la copia diaria; la empresa puede elegir su hora si el plan lo permite."""
+    if not user.es_plataforma and request.auto_habilitado is not None:
+        raise HTTPException(status_code=403, detail="Solo plataforma puede activar o desactivar los respaldos automáticos")
     if await session.get(EmpresaModel, empresa_id) is None:
         raise HTTPException(status_code=404, detail="Empresa no encontrada")
     if request.hora_local is not None:
