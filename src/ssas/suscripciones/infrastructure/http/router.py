@@ -26,6 +26,7 @@ from ssas.empresas.infrastructure.persistence.models.suscripcion import (
 from ssas.infrastructure.database.session import get_session
 from ssas.modulos.infrastructure.persistence.models.empresa_modulo import EmpresaModuloModel
 from ssas.modulos.infrastructure.persistence.models.modulo import ModuloModel
+from ssas.suscripciones.application.invoice_email import InvoiceEmailError, send_paid_invoice
 from ssas.suscripciones.application.policy import SubscriptionPolicy, SubscriptionPolicyError
 from ssas.suscripciones.infrastructure.http.schemas import (
     AssignSubscriptionRequest,
@@ -210,6 +211,7 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(alias=
     log = await _claim_stripe_event(session, event)
     if log is None: return {"received": True, "duplicate": True}
     obj = event["data"]["object"]; event_type = event["type"]
+    invoice_mail = None
     try:
         async with session.begin_nested():
             item = None
@@ -223,10 +225,32 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(alias=
             elif event_type in {"invoice.paid", "invoice.payment_failed"}:
                 item = (await session.execute(select(SuscripcionModel).where(SuscripcionModel.stripe_customer_id == obj.get("customer")))).scalar_one_or_none()
                 if item: item.estado = "ACTIVA" if event_type == "invoice.paid" else "PAGO_FALLIDO"; item.fecha_ultimo_pago = datetime.now(UTC) if event_type == "invoice.paid" else item.fecha_ultimo_pago
+                if event_type == "invoice.paid":
+                    if item is None:
+                        raise ValueError("Cliente Stripe sin empresa asociada")
+                    company = await session.get(EmpresaModel, item.empresa_id)
+                    recipient = obj.get("customer_email") or (company.email if company else None) or settings.smtp_only_email
+                    if not recipient:
+                        raise InvoiceEmailError("La empresa no tiene correo de facturación")
+                    invoice_mail = (obj, recipient)
             if item:
                 await _sync_modules(session, item.empresa_id, item.plan_id)
                 await _audit(session, None, "SUBSCRIPTION_UPDATED", f"Stripe procesó {event_type}", item.id, item.empresa_id, {"estado": item.estado})
+        if invoice_mail:
+            # Confirmar el pago en BD antes de llamar al proveedor de correo.
+            await session.commit()
+            try:
+                await send_paid_invoice(*invoice_mail)
+            except InvoiceEmailError as exc:
+                log.estado_procesamiento = "FALLIDO"
+                log.error = str(exc)[:2000]
+                log.fecha_procesamiento = datetime.now(UTC)
+                await session.commit()
+                raise HTTPException(503, "No se pudo enviar el comprobante; Stripe reintentará") from exc
         log.estado_procesamiento = "PROCESADO"; log.fecha_procesamiento = datetime.now(UTC)
+        await session.commit()
+    except HTTPException:
+        raise
     except Exception as exc:
         log.estado_procesamiento = "FALLIDO"; log.error = str(exc)[:2000]; log.fecha_procesamiento = datetime.now(UTC)
         await session.commit()

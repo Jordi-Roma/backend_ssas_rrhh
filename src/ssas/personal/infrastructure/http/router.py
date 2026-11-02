@@ -6,18 +6,21 @@ from pathlib import Path
 from uuid import UUID, uuid4
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ssas.auth.infrastructure.persistence.models.user import UserModel
 from ssas.cargos.infrastructure.persistence.models.cargo import CargoModel
 from ssas.config.settings import settings
 from ssas.core.security.dependencies import CurrentUser, require_scoped_permission
 from ssas.departamentos.infrastructure.persistence.models.departamento import DepartamentoModel
 from ssas.empleados.infrastructure.persistence.models.empleado import EmpleadoModel
 from ssas.infrastructure.database.session import get_session
+from ssas.personal.application.absence_email import send_absence_notice
 from ssas.personal.application.attendance import minutes_late, worked_hours
 from ssas.personal.application.audit import record_personal_event
 from ssas.personal.infrastructure.persistence.models import (
@@ -30,6 +33,8 @@ from ssas.personal.infrastructure.persistence.models import (
     SolicitudAusenciaModel,
     TipoAusenciaModel,
 )
+from ssas.roles.infrastructure.persistence.models.role import RoleModel
+from ssas.roles.infrastructure.persistence.models.user_role import usuario_rol_table
 
 router = APIRouter(prefix="/personal", tags=["Personal"])
 
@@ -62,6 +67,24 @@ class AbsenceInput(BaseModel):
     fecha_fin: date
     motivo: str = Field(min_length=1)
     documento_id: UUID | None = None
+
+
+class AbsenceTypeInput(BaseModel):
+    codigo: str = Field(min_length=2, max_length=40, pattern=r"^[A-Z][A-Z0-9_]*$")
+    nombre: str = Field(min_length=2, max_length=120)
+    es_remunerado: bool
+    descuenta_vacacion: bool = False
+    requiere_documento: bool = False
+    dias_maximos_anio: int | None = Field(default=None, ge=1, le=366)
+
+
+class AbsenceTypeUpdate(BaseModel):
+    nombre: str = Field(min_length=2, max_length=120)
+    es_remunerado: bool
+    descuenta_vacacion: bool
+    requiere_documento: bool
+    dias_maximos_anio: int | None = Field(default=None, ge=1, le=366)
+    activo: bool
 
 
 class AbsenceDecision(BaseModel):
@@ -569,6 +592,89 @@ async def absence_types(
     ]
 
 
+def absence_type_dict(row: TipoAusenciaModel) -> dict:
+    return {
+        "id": row.id, "codigo": row.codigo, "nombre": row.nombre,
+        "es_remunerado": row.es_remunerado,
+        "descuenta_vacacion": row.descuenta_vacacion,
+        "requiere_documento": row.requiere_documento,
+        "dias_maximos_anio": row.dias_maximos_anio,
+        "activo": row.activo,
+    }
+
+
+@router.get("/tipos-ausencia/configuracion", summary="Administrar tipos de ausencia")
+async def configure_absence_types(
+    empresa_id: UUID | None = None,
+    user: CurrentUser = Depends(require_scoped_permission("ausencias:gestionar", "platform:ausencias:gestionar")),
+    session: AsyncSession = Depends(get_session),
+):
+    company = tenant(user, empresa_id)
+    rows = (await session.scalars(select(TipoAusenciaModel).where(
+        TipoAusenciaModel.empresa_id == company,
+    ).order_by(TipoAusenciaModel.nombre))).all()
+    return [absence_type_dict(row) for row in rows]
+
+
+@router.post("/tipos-ausencia", status_code=201, summary="Crear tipo de ausencia")
+async def create_absence_type(
+    payload: AbsenceTypeInput,
+    empresa_id: UUID | None = None,
+    user: CurrentUser = Depends(require_scoped_permission("ausencias:gestionar", "platform:ausencias:gestionar")),
+    session: AsyncSession = Depends(get_session),
+):
+    company = tenant(user, empresa_id)
+    if payload.descuenta_vacacion and not payload.es_remunerado:
+        raise HTTPException(422, "Una ausencia que descuenta vacaciones debe ser remunerada")
+    row = TipoAusenciaModel(empresa_id=company, **payload.model_dump())
+    try:
+        async with session.begin_nested():
+            session.add(row)
+            await session.flush()
+    except IntegrityError as exc:
+        raise HTTPException(409, "Ya existe ese código en la empresa") from exc
+    await record_personal_event(session, user, company, action="TIPO_AUSENCIA_CREADO",
+                                table="tipo_ausencia", record_id=row.id,
+                                data={"codigo": row.codigo, "nombre": row.nombre})
+    return absence_type_dict(row)
+
+
+@router.put("/tipos-ausencia/{tipo_id}", summary="Editar tipo de ausencia")
+async def update_absence_type(
+    tipo_id: UUID,
+    payload: AbsenceTypeUpdate,
+    empresa_id: UUID | None = None,
+    user: CurrentUser = Depends(require_scoped_permission("ausencias:gestionar", "platform:ausencias:gestionar")),
+    session: AsyncSession = Depends(get_session),
+):
+    company = tenant(user, empresa_id)
+    row = await session.scalar(select(TipoAusenciaModel).where(
+        TipoAusenciaModel.id == str(tipo_id), TipoAusenciaModel.empresa_id == company,
+    ).with_for_update())
+    if row is None:
+        raise HTTPException(404, "Tipo de ausencia no encontrado")
+    if payload.descuenta_vacacion and not payload.es_remunerado:
+        raise HTTPException(422, "Una ausencia que descuenta vacaciones debe ser remunerada")
+    used = await session.scalar(select(func.count()).select_from(SolicitudAusenciaModel).where(
+        SolicitudAusenciaModel.tipo_ausencia_id == row.id,
+        SolicitudAusenciaModel.empresa_id == company,
+    ))
+    if used and any((
+        row.es_remunerado != payload.es_remunerado,
+        row.descuenta_vacacion != payload.descuenta_vacacion,
+        row.requiere_documento != payload.requiere_documento,
+        row.dias_maximos_anio != payload.dias_maximos_anio,
+    )):
+        raise HTTPException(409, "Este tipo ya tiene solicitudes; sus reglas no se pueden cambiar")
+    for field, value in payload.model_dump().items():
+        setattr(row, field, value)
+    await session.flush()
+    await record_personal_event(session, user, company, action="TIPO_AUSENCIA_EDITADO",
+                                table="tipo_ausencia", record_id=row.id,
+                                data={"nombre": row.nombre, "activo": row.activo})
+    return absence_type_dict(row)
+
+
 @router.post("/mi/asistencia/entrada", status_code=201, summary="Marcar entrada con GPS")
 async def clock_in(
     payload: GPSInput,
@@ -773,9 +879,36 @@ async def team_attendance(
     ]
 
 
+async def absence_approver_emails(session: AsyncSession, company: str, worker_id: str) -> list[str]:
+    """Avisa al jefe vigente; si no hay jefe con cuenta, a RRHH/administración."""
+    leader_ids = select(ContratoModel.jefe_directo_id).where(
+        ContratoModel.empresa_id == company,
+        ContratoModel.empleado_id == worker_id,
+        ContratoModel.estado == "VIGENTE",
+        ContratoModel.jefe_directo_id.is_not(None),
+    )
+    emails = (await session.scalars(select(UserModel.email).join(
+        EmpleadoModel, EmpleadoModel.usuario_id == UserModel.id,
+    ).where(
+        EmpleadoModel.id.in_(leader_ids), UserModel.empresa_id == company,
+        UserModel.is_active.is_(True), UserModel.eliminado_at.is_(None),
+    ))).all()
+    if emails:
+        return list(set(emails))
+    emails = (await session.scalars(select(UserModel.email).join(
+        usuario_rol_table, usuario_rol_table.c.usuario_id == UserModel.id,
+    ).join(RoleModel, RoleModel.id == usuario_rol_table.c.rol_id).where(
+        UserModel.empresa_id == company, UserModel.is_active.is_(True),
+        UserModel.eliminado_at.is_(None), RoleModel.empresa_id == company,
+        RoleModel.codigo.in_(("ADMIN_EMPRESA", "RRHH")), RoleModel.is_active.is_(True),
+    ))).all()
+    return list(set(emails))
+
+
 @router.post("/mi/ausencias", status_code=201, summary="Solicitar ausencia")
 async def request_absence(
     payload: AbsenceInput,
+    background_tasks: BackgroundTasks,
     user: CurrentUser = Depends(
         require_scoped_permission("ausencias:solicitar", "platform:ausencias:solicitar")
     ),
@@ -801,6 +934,19 @@ async def request_absence(
     )
     if kind is None or (kind.requiere_documento and not payload.documento_id):
         raise HTTPException(422, "Tipo de ausencia o documento invalido")
+    if kind.dias_maximos_anio is not None:
+        if payload.fecha_inicio.year != payload.fecha_fin.year:
+            raise HTTPException(422, "Este tipo de ausencia no puede cruzar gestiones")
+        used_days = (await session.scalars(select(SolicitudAusenciaModel.dias_solicitados).where(
+            SolicitudAusenciaModel.empresa_id == user.empresa_id,
+            SolicitudAusenciaModel.empleado_id == worker.id,
+            SolicitudAusenciaModel.tipo_ausencia_id == kind.id,
+            SolicitudAusenciaModel.estado.in_(("PENDIENTE", "APROBADA")),
+            SolicitudAusenciaModel.fecha_inicio >= date(payload.fecha_inicio.year, 1, 1),
+            SolicitudAusenciaModel.fecha_fin <= date(payload.fecha_inicio.year, 12, 31),
+        ))).all()
+        if days + sum(used_days) > kind.dias_maximos_anio:
+            raise HTTPException(409, "Se supera el maximo anual de este tipo de ausencia")
     if payload.documento_id:
         document = await session.scalar(
             select(DocumentoEmpleadoModel.id).where(
@@ -834,6 +980,13 @@ async def request_absence(
     )
     session.add(row)
     await session.flush()
+    await session.commit()
+    if settings.smtp_only_email:
+        background_tasks.add_task(
+            send_absence_notice, [settings.smtp_only_email], "Nueva solicitud de ausencia",
+            "Hay una solicitud de ausencia pendiente de revisión.",
+            "personal/ausencias/bandeja",
+        )
     return {"id": row.id, "estado": row.estado, "dias_solicitados": days}
 
 
@@ -938,6 +1091,7 @@ async def team_absences(
 async def decide_absence(
     solicitud_id: UUID,
     payload: AbsenceDecision,
+    background_tasks: BackgroundTasks,
     empresa_id: UUID | None = None,
     user: CurrentUser = Depends(
         require_scoped_permission("ausencias:aprobar", "platform:ausencias:aprobar")
@@ -1022,4 +1176,12 @@ async def decide_absence(
         record_id=row.id,
         data={"estado": row.estado, "dias_descontados": row.dias_descontados},
     )
+    await session.commit()
+    if settings.smtp_only_email:
+        status_text = "aprobada" if payload.aprobar else "rechazada"
+        background_tasks.add_task(
+            send_absence_notice, [settings.smtp_only_email], "Resultado de tu solicitud de ausencia",
+            f"Tu solicitud de ausencia fue {status_text}.",
+            "personal/ausencias/mi",
+        )
     return {"id": row.id, "estado": row.estado, "dias_descontados": row.dias_descontados}

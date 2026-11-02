@@ -269,17 +269,17 @@ async def exportar(formato: str, body: ReporteConfig, request: Request, empresa_
 @router.post("/enviar", status_code=202)
 async def enviar(body: EnviarReporteRequest, request: Request, empresa_id: str | None = None, user: CurrentUser = Depends(require_scoped_permission("reportes:enviar", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
     """Genera el reporte y lo envía como adjunto mediante la configuración SMTP."""
-    if not all((settings.smtp_host, settings.smtp_from_email)):
+    if not all((settings.smtp_host, settings.smtp_from_email, settings.smtp_only_email)):
         raise HTTPException(503, "El envío de correo no está configurado")
     config = ReporteConfig(**body.model_dump(exclude={"destinatarios", "formato"})); target = _empresa(user, empresa_id)
     await require_plan_feature(session, target, "reportes_avanzados")
     rows = await _rows(session, target, config); content, media = _document(config, rows, body.formato)
-    message = EmailMessage(); message["Subject"] = "Reporte SSAH RRHH"; message["From"] = settings.smtp_from_email; message["To"] = ", ".join(body.destinatarios); message.set_content("Se adjunta el reporte solicitado.")
+    message = EmailMessage(); message["Subject"] = "Reporte SSAH RRHH"; message["From"] = settings.smtp_from_email; message["To"] = settings.smtp_only_email; message.set_content("Se adjunta el reporte solicitado.")
     main, sub = media.split("/", 1); message.add_attachment(content, maintype=main, subtype=sub, filename=f"reporte.{body.formato}")
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port) as smtp:
         if settings.smtp_use_tls: smtp.starttls()
         if settings.smtp_username: smtp.login(settings.smtp_username, settings.smtp_password or "")
         smtp.send_message(message)
     session.add(ReporteEjecucionModel(empresa_id=target, usuario_id=user.id, formato=body.formato, filtros_aplicados=[f.model_dump() for f in body.filtros], estado="COMPLETADO", cantidad_registros=len(rows), fecha_fin=datetime.now(UTC)))
-    await _audit(session, request, user, target, "SEND", "Reporte enviado por correo", new_data={"formato": body.formato, "destinatarios": len(body.destinatarios)})
+    await _audit(session, request, user, target, "SEND", "Reporte enviado por correo", new_data={"formato": body.formato, "destinatarios": 1})
     return {"message": "Reporte enviado"}

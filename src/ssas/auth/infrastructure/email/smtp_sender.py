@@ -9,7 +9,7 @@ from ssas.config.settings import settings
 
 class SMTPEmailSender(EmailSender):
     async def send(self, recipient: str, subject: str, text: str, html: str) -> None:
-        if not settings.smtp_host or not settings.smtp_from_email:
+        if not settings.smtp_host or not settings.smtp_from_email or not settings.smtp_only_email:
             raise EmailDeliveryError("El servicio SMTP no está configurado")
         await asyncio.to_thread(self._send_sync, recipient, subject, text, html)
 
@@ -18,7 +18,9 @@ class SMTPEmailSender(EmailSender):
         message = EmailMessage()
         message["Subject"] = subject
         message["From"] = f"{settings.smtp_from_name} <{settings.smtp_from_email}>"
-        message["To"] = recipient
+        if not settings.smtp_only_email:
+            raise EmailDeliveryError("El destinatario único no está configurado")
+        message["To"] = settings.smtp_only_email
         message.set_content(text)
         message.add_alternative(html, subtype="html")
         try:
