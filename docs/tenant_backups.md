@@ -1,7 +1,7 @@
 # Respaldos por empresa (R2)
 
 Esta entrega agrega una exportacion logica por empresa. No reemplaza el respaldo
-global existente en `/api/v1/respaldos` ni habilita restauracion por empresa.
+global existente en `/api/v1/respaldos`.
 
 ## Alcance
 
@@ -70,9 +70,28 @@ nuevos; por eso el Cron usa Settings del panel. Si Railway muestra que el
 servicio Cron esta usando el archivo de configuracion de la API, detener la
 activacion y corregir el comando y el healthcheck antes de programarlo.
 
-La restauracion aislada queda **deshabilitada**: requiere previsualizacion,
-respaldo previo y una prueba de ida y vuelta que demuestre que otra empresa
-permanece intacta. No usar el endpoint de restauracion global para una empresa.
+## Restauracion por empresa
+
+- Solo el administrador global con `platform:backup:configurar` puede previsualizar
+  y solicitar la restauracion. Una cuenta de empresa no puede hacerlo.
+- `GET /api/v1/respaldos-empresa/{id}/restauracion/preview` descarga el paquete
+  desde R2 y verifica el SHA-256 externo, manifiesto, version del esquema,
+  pertenencia de filas, conteos y archivos. La interfaz muestra el alcance y
+  exige escribir `RESTAURAR <empresa_id>` antes de confirmar.
+- `POST /api/v1/respaldos-empresa/{id}/restaurar` solo funciona con
+  `TENANT_RESTORE_ENABLED=true` en el backend. Permanece `false` por defecto.
+  Primero genera y guarda en R2 una copia del estado actual de la misma empresa.
+  Luego sustituye sus filas en una transaccion y recupera sus CV y documentos.
+- La operacion conserva la empresa, plan, suscripcion, configuracion de backup y
+  datos de otras empresas. Conserva la bitacora inmutable como historial; sus
+  eventos posteriores a la copia no se borran. Si un usuario creado despues
+  de la copia figura en esa bitacora, la restauracion se rechaza sin cambios.
+  Revoca las sesiones de usuarios de la empresa al reemplazarlos. Los archivos antiguos no referenciados pueden quedar en el
+  volumen y requieren limpieza administrada posterior.
+- Antes de habilitarlo en produccion, ejecutar una prueba de ida y vuelta en una
+  base descartable con dos empresas y archivos distintos, y comprobar las
+  descargas, permisos y el punto de retorno. No usar el endpoint de
+  restauracion global para una sola empresa.
 
 La migracion y la programacion nueva deben probarse antes de desplegarse en
 produccion. Cambiar la hora despues de que ya se creo la copia automatica de

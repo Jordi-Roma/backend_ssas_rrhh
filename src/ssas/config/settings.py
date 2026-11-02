@@ -46,6 +46,7 @@ class Settings(BaseSettings):
     r2_secret_access_key: SecretStr | None = None
     r2_region: str = "auto"
     tenant_backup_enabled: bool = False
+    tenant_restore_enabled: bool = False
     tenant_backup_retention_days: int = Field(default=30, ge=1, le=365)
     backup_restore_enabled: bool = False
     backup_restore_confirmation: str = "RESTAURAR BASE DE DATOS"

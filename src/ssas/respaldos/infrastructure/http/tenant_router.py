@@ -20,6 +20,7 @@ from ssas.core.api.openapi import TAG_RESPALDOS_EMPRESA
 from ssas.core.security.dependencies import (
     CurrentUser,
     require_empresa_permission,
+    require_platform_permission,
     require_scoped_permission,
 )
 from ssas.empresas.infrastructure.persistence.models.empresa import EmpresaModel
@@ -28,8 +29,14 @@ from ssas.respaldos.infrastructure.persistence.models.respaldo_empresa import Re
 from ssas.respaldos.infrastructure.persistence.models.respaldo_empresa_config import (
     RespaldoEmpresaConfigModel,
 )
+from ssas.respaldos.infrastructure.services.errors import TenantBackupError
 from ssas.respaldos.infrastructure.services.r2_storage import R2BackupStorage
 from ssas.respaldos.infrastructure.services.tenant_jobs import enqueue_backup
+from ssas.respaldos.infrastructure.services.tenant_restore import (
+    create_safety_backup,
+    download_and_validate,
+    restore_company,
+)
 from ssas.suscripciones.infrastructure.http.feature_guard import (
     has_plan_feature,
     require_plan_feature,
@@ -81,6 +88,12 @@ class BackupConfigRequest(BaseModel):
         if self.auto_habilitado is None and self.hora_local is None:
             raise ValueError("Indica auto_habilitado u hora_local")
         return self
+
+
+class TenantRestoreRequest(BaseModel):
+    empresa_id: str
+    confirmacion: str
+    sha256: str
 
 
 def _scope(user: CurrentUser, empresa_id: str | None) -> str | None:
@@ -269,3 +282,50 @@ async def download_tenant_backup(
     except Exception:
         path.unlink(missing_ok=True)
         raise
+
+
+@router.get("/{backup_id}/restauracion/preview", summary="Previsualizar restauración de empresa")
+async def preview_tenant_restore(
+    backup_id: str,
+    user: CurrentUser = Depends(require_platform_permission("platform:backup:configurar")),
+    session: AsyncSession = Depends(get_session),
+):
+    backup = await _get_owned(session, backup_id, user)
+    with tempfile.TemporaryDirectory(prefix="ssas-tenant-preview-") as directory:
+        try:
+            package = await download_and_validate(backup, Path(directory) / "backup.tar.gz")
+        except TenantBackupError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {
+        "empresa_id": backup.empresa_id,
+        "respaldo_id": backup.id,
+        "sha256": backup.sha256,
+        "fecha_copia": backup.fecha_creacion,
+        "tablas": package.manifest["rows"],
+        "archivos": len(package.manifest["files"]),
+        "restauracion_habilitada": settings.tenant_restore_enabled,
+    }
+
+
+@router.post("/{backup_id}/restaurar", summary="Restaurar una empresa desde su copia")
+async def restore_tenant_backup(
+    backup_id: str,
+    request: TenantRestoreRequest,
+    user: CurrentUser = Depends(require_platform_permission("platform:backup:configurar")),
+    session: AsyncSession = Depends(get_session),
+):
+    if not settings.tenant_restore_enabled:
+        raise HTTPException(status_code=409, detail="Restauración por empresa deshabilitada")
+    backup = await _get_owned(session, backup_id, user)
+    if request.empresa_id != backup.empresa_id or request.sha256 != backup.sha256:
+        raise HTTPException(status_code=409, detail="La empresa o el respaldo cambiaron")
+    if request.confirmacion != f"RESTAURAR {backup.empresa_id}":
+        raise HTTPException(status_code=422, detail="Confirmación incorrecta")
+    with tempfile.TemporaryDirectory(prefix="ssas-tenant-restore-") as directory:
+        try:
+            package = await download_and_validate(backup, Path(directory) / "backup.tar.gz")
+            safety_id = await create_safety_backup(backup.empresa_id, user.id)
+            await restore_company(package, backup.empresa_id, user.id)
+        except TenantBackupError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"empresa_id": backup.empresa_id, "respaldo_id": backup.id, "respaldo_previo_id": safety_id}
