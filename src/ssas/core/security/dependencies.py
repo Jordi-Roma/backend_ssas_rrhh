@@ -219,3 +219,34 @@ def require_scoped_permission(tenant_permission: str, platform_permission: str) 
         return current_user
 
     return dependency
+
+
+def require_scoped_any_permission(
+    tenant_permissions: tuple[str, ...], platform_permissions: tuple[str, ...]
+) -> Callable:
+    """Autoriza cualquiera de los permisos del alcance propio del usuario."""
+
+    async def dependency(
+        current_user: CurrentUser = Depends(get_current_user),
+        session: AsyncSession = Depends(get_session),
+    ) -> CurrentUser:
+        if current_user.must_change_password:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Debes cambiar tu contraseña antes de continuar",
+            )
+        allowed = platform_permissions if current_user.es_plataforma else tenant_permissions
+        authorization = CheckPermission(SqlAlchemyAuthorizationRepository(session))
+        for permission in allowed:
+            try:
+                await authorization.execute(
+                    user_id=current_user.id,
+                    empresa_id=current_user.empresa_id,
+                    required_permission=permission,
+                )
+                return current_user
+            except PermissionDeniedError:
+                continue
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Permiso insuficiente")
+
+    return dependency

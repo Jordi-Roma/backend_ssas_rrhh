@@ -5,6 +5,7 @@ import pytest
 from ssas.roles.application.use_cases.assign_permissions import AssignPermissions
 from ssas.roles.application.use_cases.create_role import CreateRole
 from ssas.roles.application.use_cases.delete_role import DeleteRole
+from ssas.roles.application.use_cases.update_role import UpdateRole
 from ssas.roles.domain.exceptions import PermissionNotFoundError, ProtectedRoleError
 
 pytestmark = pytest.mark.asyncio
@@ -95,3 +96,35 @@ async def test_custom_role_can_be_left_without_permissions() -> None:
 
     assert result is role
     assert repository.assigned == []
+
+
+async def test_base_employee_role_can_receive_personal_permissions() -> None:
+    role = SimpleNamespace(id="role-employee", empresa_id="empresa-a", es_base=True)
+    repository = FakeManagedRoleRepository(role)
+    permissions = [SimpleNamespace(id="permission-1", name="boletas:mi")]
+
+    result = await AssignPermissions(repository, FakePermissions(permissions)).execute(
+        role.id, ["permission-1"]
+    )
+
+    assert result is role
+    assert repository.assigned == permissions
+
+
+async def test_base_role_can_be_renamed_but_not_deactivated() -> None:
+    role = SimpleNamespace(id="role-employee", name="Empleado", es_base=True)
+    repository = FakeManagedRoleRepository(role)
+
+    async def get_by_name(_name):
+        return None
+
+    async def update(_role_id, values):
+        return values
+
+    repository.get_by_name = get_by_name
+    repository.update = update
+    result = await UpdateRole(repository).execute(role.id, {"name": "Colaborador"})
+    assert result["name"] == "Colaborador"
+
+    with pytest.raises(ProtectedRoleError):
+        await UpdateRole(repository).execute(role.id, {"is_active": False})

@@ -563,6 +563,7 @@ async def absence_types(
             "nombre": row.nombre,
             "es_remunerado": row.es_remunerado,
             "descuenta_vacacion": row.descuenta_vacacion,
+            "requiere_documento": row.requiere_documento,
         }
         for row in rows
     ]
@@ -924,6 +925,7 @@ async def team_absences(
         {
             "id": r.id,
             "empleado_id": r.empleado_id,
+            "tipo_ausencia_id": r.tipo_ausencia_id,
             "fecha_inicio": r.fecha_inicio,
             "fecha_fin": r.fecha_fin,
             "estado": r.estado,

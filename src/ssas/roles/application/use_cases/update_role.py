@@ -9,8 +9,8 @@ class UpdateRole:
         role = await self.repository.get_by_id(role_id)
         if not role:
             raise RoleNotFoundError("Rol no encontrado")
-        if role.es_base:
-            raise ProtectedRoleError("Los roles base del sistema no se pueden modificar")
+        if role.es_base and values.get("is_active") is False:
+            raise ProtectedRoleError("El rol principal no se puede desactivar")
         normalized_values = dict(values)
         name = normalized_values.get("name")
         if isinstance(name, str):

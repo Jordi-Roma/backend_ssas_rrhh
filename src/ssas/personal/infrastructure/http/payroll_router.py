@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ssas.core.security.dependencies import (
     CurrentUser,
     require_platform_permission,
+    require_scoped_any_permission,
     require_scoped_permission,
 )
 from ssas.empleados.infrastructure.persistence.models.empleado import EmpleadoModel
@@ -460,7 +461,12 @@ async def minimum_wage(session: AsyncSession, cutoff: date) -> Decimal:
 @router.get("/periodos", summary="Listar periodos de nomina")
 async def periods(
     empresa_id: UUID | None = None,
-    user: CurrentUser = Depends(require_scoped_permission("nomina:ver", "platform:nomina:ver")),
+    user: CurrentUser = Depends(
+        require_scoped_any_permission(
+            ("nomina:ver", "nomina:gestionar", "boletas:ver", "boletas:mi"),
+            ("platform:nomina:ver", "platform:nomina:gestionar", "platform:boletas:ver"),
+        )
+    ),
     session: AsyncSession = Depends(get_session),
 ):
     company = tenant(user, empresa_id)
@@ -1175,15 +1181,27 @@ async def period_payslips(
     if period is None:
         raise HTTPException(404, "Periodo no encontrado")
     rows = (
-        await session.scalars(
-            select(BoletaPagoModel).where(
-                BoletaPagoModel.periodo_id == period, BoletaPagoModel.empresa_id == company
+        await session.execute(
+            select(BoletaPagoModel, EmpleadoModel)
+            .join(
+                EmpleadoModel,
+                (EmpleadoModel.id == BoletaPagoModel.empleado_id)
+                & (EmpleadoModel.empresa_id == BoletaPagoModel.empresa_id),
             )
+            .where(BoletaPagoModel.periodo_id == period, BoletaPagoModel.empresa_id == company)
         )
     ).all()
     return [
-        {"id": r.id, "empleado_id": r.empleado_id, "liquido_pagable": r.liquido_pagable}
-        for r in rows
+        {
+            "id": payslip.id,
+            "empleado_id": payslip.empleado_id,
+            "liquido_pagable": payslip.liquido_pagable,
+            "empleado_codigo": employee.codigo,
+            "empleado_nombre": " ".join(
+                filter(None, (employee.nombres, employee.apellido_paterno, employee.apellido_materno))
+            ),
+        }
+        for payslip, employee in rows
     ]
 
 

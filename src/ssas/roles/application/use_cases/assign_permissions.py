@@ -1,6 +1,5 @@
 from ssas.roles.domain.exceptions import (
     PermissionNotFoundError,
-    ProtectedRoleError,
     RoleNotFoundError,
 )
 
@@ -16,9 +15,6 @@ class AssignPermissions:
         role = await self.role_repository.get_by_id(role_id)
         if not role:
             raise RoleNotFoundError("Rol no encontrado")
-        if role.es_base:
-            raise ProtectedRoleError("Los permisos de los roles base no se pueden modificar")
-
         permissions = await self.permission_repository.get_by_ids(permission_ids)
         if len(permissions) != len(set(permission_ids)):
             raise PermissionNotFoundError("Una o más permisos no existen")
