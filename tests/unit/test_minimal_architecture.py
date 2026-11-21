@@ -74,6 +74,8 @@ def test_schema_contains_only_current_scope_tables() -> None:
         "inscripcion",
         "progreso_leccion",
         "empleado_habilidad",
+            "notificacion",
+            "notificacion_dispositivo",
     }
 
 
@@ -123,6 +125,7 @@ def test_openapi_is_grouped_and_summarizes_every_business_operation() -> None:
         "Personal",
         "Capacitación",
         "Indicadores",
+        "Notificaciones",
     }
 
     assert {tag["name"] for tag in schema["tags"]} == expected_tags

@@ -43,9 +43,16 @@ API_V1_PREFIX = "/api/v1"
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     worker = asyncio.create_task(backup_worker()) if settings.tenant_backup_enabled else None
+    from ssas.personal.notification_jobs import notification_worker
+    notification_task = asyncio.create_task(notification_worker())
     try:
         yield
     finally:
+        notification_task.cancel()
+        try:
+            await notification_task
+        except asyncio.CancelledError:
+            pass
         if worker is not None:
             worker.cancel()
             try:
@@ -73,6 +80,7 @@ app = FastAPI(
     openapi_tags=[
         {"name": "Capacitación", "description": "Cursos, lecciones, materiales e inscripciones por empresa."},
         {"name": "Indicadores", "description": "Métricas de personal y reclutamiento por empresa."},
+        {"name": "Notificaciones", "description": "Avisos personales, lectura y dispositivos móviles."},
         {"name": "Chatbot", "description": "Base de conocimiento y conversacion por empresa."},
         {"name": "Ayuda", "description": "Guías locales de uso visibles según los permisos de la cuenta."},
         {"name": "Importación", "description": "Carga CSV de catálogos de una empresa con vista previa y confirmación."},

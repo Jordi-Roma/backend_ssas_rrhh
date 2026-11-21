@@ -36,7 +36,7 @@ DIRECT_TABLES = (
     "autorizacion_horas_extra", "estructura_salarial", "regla_salarial",
     "periodo_nomina", "boleta_pago", "boleta_detalle",
     "impuesto_empleado", "haber_proporcional",
-    "curso", "leccion", "inscripcion", "progreso_leccion", "empleado_habilidad",
+    "curso", "leccion", "inscripcion", "progreso_leccion", "empleado_habilidad", "notificacion",
 )
 CHILD_TABLES = (
     ("usuario_rol", "usuario_id", "usuario"),
@@ -52,6 +52,7 @@ CHILD_TABLES = (
 PLATFORM_TABLES = {
     "empresa_modulo", "suscripcion", "respaldo_empresa", "respaldo_empresa_config", "refresh_token",
     "password_reset_token", "email_verification_token",
+    "notificacion_dispositivo",
 }
 GLOBAL_TABLES = {
     "empresa", "permiso", "modulo", "parametro_legal", "parametro_valor",

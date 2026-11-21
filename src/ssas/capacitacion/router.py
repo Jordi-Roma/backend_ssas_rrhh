@@ -2,7 +2,7 @@
 
 import json
 import os
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
@@ -73,6 +73,7 @@ class CursoInput(BaseModel):
     imagen_url: str | None = None
     instructor: str | None = Field(None, max_length=160)
     nota_minima: Decimal = Field(70, ge=0, le=100)
+    habilidad_id: UUID | None = None
 
 
 class LeccionInput(BaseModel):
@@ -125,6 +126,7 @@ class HabilidadInput(BaseModel):
     habilidad_id: UUID
     nivel: str | None = Field(None, max_length=30)
     adquirida_en: date | None = None
+    fecha_evaluacion: datetime | None = None
 
 
 MANAGE = Depends(require_scoped_permission("capacitacion:gestionar", "platform:capacitacion:gestionar"))
@@ -144,7 +146,10 @@ async def cursos(empresa_id: str | None = None, user: CurrentUser = READ, sessio
 
 @router.post("/cursos", status_code=201)
 async def crear_curso(body: CursoInput, empresa_id: str | None = None, user: CurrentUser = MANAGE, session: AsyncSession = Depends(get_session)):
-    item = CursoModel(id=str(uuid4()), empresa_id=scope(user, empresa_id), **body.model_dump())
+    target = scope(user, empresa_id)
+    if body.habilidad_id:
+        await owned(session, HabilidadModel, str(body.habilidad_id), target)
+    item = CursoModel(id=str(uuid4()), empresa_id=target, **body.model_dump(mode="json"))
     session.add(item)
     await session.flush()
     return view(item)
@@ -161,10 +166,13 @@ async def curso(curso_id: UUID, empresa_id: str | None = None, user: CurrentUser
 
 @router.patch("/cursos/{curso_id}")
 async def editar_curso(curso_id: UUID, body: CursoInput, empresa_id: str | None = None, user: CurrentUser = MANAGE, session: AsyncSession = Depends(get_session)):
-    item = await owned(session, CursoModel, str(curso_id), scope(user, empresa_id))
+    target = scope(user, empresa_id)
+    item = await owned(session, CursoModel, str(curso_id), target)
     if item.estado != "BORRADOR":
         raise HTTPException(409, "Solo se edita un borrador")
-    for key, value in body.model_dump().items():
+    if body.habilidad_id:
+        await owned(session, HabilidadModel, str(body.habilidad_id), target)
+    for key, value in body.model_dump(mode="json").items():
         setattr(item, key, value)
     await session.flush()
     return view(item)
@@ -325,8 +333,15 @@ async def mis_cursos(empresa_id: str | None = None, user: CurrentUser = LEARN, s
     employee = await session.scalar(select(EmpleadoModel.id).where(EmpleadoModel.empresa_id == target, EmpleadoModel.usuario_id == user.id))
     if employee is None:
         return []
-    items = await session.scalars(select(InscripcionModel).where(InscripcionModel.empresa_id == target, InscripcionModel.empleado_id == employee))
-    return [view(item) for item in items]
+    rows = (await session.execute(
+        select(InscripcionModel, CursoModel.titulo, CursoModel.es_obligatorio)
+        .join(CursoModel, (CursoModel.id == InscripcionModel.curso_id)
+              & (CursoModel.empresa_id == InscripcionModel.empresa_id))
+        .where(InscripcionModel.empresa_id == target, InscripcionModel.empleado_id == employee)
+        .order_by(InscripcionModel.inscrito_en.desc())
+    )).all()
+    return [{**view(item), "curso_titulo": title, "curso_obligatorio": required}
+            for item, title, required in rows]
 
 
 @router.get("/inscripciones")
@@ -372,6 +387,8 @@ async def completar(inscripcion_id: UUID, leccion_id: UUID, body: LeccionComplet
         course = await owned(session, CursoModel, enrollment.curso_id, target)
         enrollment.aprobado = enrollment.calificacion >= course.nota_minima
         enrollment.certificado_url = f"/api/v1/capacitacion/inscripciones/{enrollment.id}/certificado" if enrollment.aprobado else None
+        if enrollment.aprobado:
+            await certify_skill(session, enrollment, course, user.id)
     await session.flush()
     return view(enrollment)
 
@@ -386,6 +403,8 @@ async def calificar(inscripcion_id: UUID, body: CalificacionInput, empresa_id: s
     enrollment.calificacion = body.calificacion
     enrollment.aprobado = body.calificacion >= course.nota_minima
     enrollment.certificado_url = f"/api/v1/capacitacion/inscripciones/{enrollment.id}/certificado" if enrollment.aprobado else None
+    if enrollment.aprobado:
+        await certify_skill(session, enrollment, course, user.id)
     await session.flush()
     return view(enrollment)
 
@@ -426,10 +445,61 @@ async def registrar_habilidad(body: HabilidadInput, empresa_id: str | None = Non
     target = scope(user, empresa_id)
     await owned(session, EmpleadoModel, str(body.empleado_id), target)
     await owned(session, HabilidadModel, str(body.habilidad_id), target)
-    item = EmpleadoHabilidadModel(id=str(uuid4()), empresa_id=target, empleado_id=str(body.empleado_id), habilidad_id=str(body.habilidad_id), nivel=body.nivel, adquirida_en=body.adquirida_en)
+    item = EmpleadoHabilidadModel(id=str(uuid4()), empresa_id=target, empleado_id=str(body.empleado_id), habilidad_id=str(body.habilidad_id), nivel=body.nivel, adquirida_en=body.adquirida_en, fecha_evaluacion=body.fecha_evaluacion, certificado_por=user.id)
     session.add(item)
     try:
         await session.flush()
     except IntegrityError as exc:
         raise HTTPException(409, "Habilidad ya registrada") from exc
     return view(item)
+
+
+async def certify_skill(session: AsyncSession, enrollment: InscripcionModel, course: CursoModel, certifier_id: str):
+    if not course.habilidad_id:
+        return
+    existing = await session.scalar(select(EmpleadoHabilidadModel).where(
+        EmpleadoHabilidadModel.empresa_id == enrollment.empresa_id,
+        EmpleadoHabilidadModel.empleado_id == enrollment.empleado_id,
+        EmpleadoHabilidadModel.habilidad_id == course.habilidad_id,
+    ))
+    if existing is None:
+        existing = EmpleadoHabilidadModel(id=str(uuid4()), empresa_id=enrollment.empresa_id,
+            empleado_id=enrollment.empleado_id, habilidad_id=course.habilidad_id)
+        session.add(existing)
+    existing.nivel = "CERTIFICADO"
+    existing.adquirida_en = local_today()
+    existing.fecha_evaluacion = datetime.now(UTC)
+    existing.certificado_por = certifier_id
+    existing.curso_id = course.id
+
+
+async def skill_profile(session: AsyncSession, target: str, employee_id: str):
+    rows = (await session.execute(
+        select(EmpleadoHabilidadModel, HabilidadModel.nombre, CursoModel.titulo)
+        .join(HabilidadModel, HabilidadModel.id == EmpleadoHabilidadModel.habilidad_id)
+        .outerjoin(CursoModel, CursoModel.id == EmpleadoHabilidadModel.curso_id)
+        .where(EmpleadoHabilidadModel.empresa_id == target,
+               EmpleadoHabilidadModel.empleado_id == employee_id)
+        .order_by(HabilidadModel.nombre)
+    )).all()
+    return [{**view(item), "habilidad_nombre": name, "curso_titulo": course_title}
+            for item, name, course_title in rows]
+
+
+@router.get("/mis-habilidades")
+async def mis_habilidades(empresa_id: str | None = None, user: CurrentUser = LEARN,
+                         session: AsyncSession = Depends(get_session)):
+    target = scope(user, empresa_id)
+    employee = await session.scalar(select(EmpleadoModel.id).where(
+        EmpleadoModel.empresa_id == target, EmpleadoModel.usuario_id == user.id))
+    return await skill_profile(session, target, employee) if employee else []
+
+
+@router.get("/empleados/{empleado_id}/habilidades")
+async def habilidades_empleado(empleado_id: UUID, empresa_id: str | None = None,
+                               user: CurrentUser = READ, session: AsyncSession = Depends(get_session)):
+    target = scope(user, empresa_id)
+    employee = await owned(session, EmpleadoModel, str(empleado_id), target)
+    if not await can_manage(session, user, target) and employee.usuario_id != user.id:
+        raise HTTPException(403, "Perfil ajeno")
+    return await skill_profile(session, target, employee.id)

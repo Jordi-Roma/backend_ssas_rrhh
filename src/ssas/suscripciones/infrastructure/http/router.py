@@ -75,6 +75,13 @@ async def _subscription_payload(session: AsyncSession, item: SuscripcionModel) -
 
 async def _audit(session: AsyncSession, user_id: str | None, action: str, description: str, record_id: str | None = None, empresa_id: str | None = None, data: dict | None = None) -> None:
     await RegisterAuditEvent(SqlAlchemyAuditLogRepository(session)).execute(empresa_id=empresa_id, module="SUSCRIPCION", action=action, description=description, user_id=user_id, affected_table="suscripcion", record_id=record_id, new_data=data)
+    if empresa_id and action in {"SUBSCRIPTION_UPDATED", "SUBSCRIPTION_MANUAL_ADJUSTMENT"}:
+        from ssas.personal.notification_service import notify_roles
+        await notify_roles(session, empresa_id=empresa_id, roles=("ADMIN_EMPRESA",),
+            event_key=f"suscripcion:{record_id}:{action}:{datetime.now(UTC).isoformat()}",
+            kind="SUSCRIPCION", title="Suscripción actualizada",
+            message="Se registró un cambio en el plan o su pago. Consulta Mi suscripción.",
+            route="/suscripcion")
 
 
 async def _sync_modules(session: AsyncSession, empresa_id: str, plan_id: str) -> None:

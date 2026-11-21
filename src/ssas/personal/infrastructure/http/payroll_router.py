@@ -1159,6 +1159,19 @@ async def approve_period(
     row.estado = "APROBADO"
     row.aprobado_en = datetime.now(UTC)
     row.aprobado_por_id = user.id
+    from ssas.personal.notification_service import notify
+    employees = (await session.execute(
+        select(BoletaPagoModel.id, EmpleadoModel.usuario_id)
+        .join(EmpleadoModel, EmpleadoModel.id == BoletaPagoModel.empleado_id)
+        .where(BoletaPagoModel.empresa_id == company, BoletaPagoModel.periodo_id == row.id,
+               EmpleadoModel.empresa_id == company, EmpleadoModel.usuario_id.is_not(None))
+    )).all()
+    for payslip_id, recipient_id in employees:
+        await notify(session, empresa_id=company, usuario_id=recipient_id,
+            event_key=f"boleta:{payslip_id}", kind="BOLETA_DISPONIBLE",
+            title="Boleta de pago disponible",
+            message=f"Tu boleta de {row.mes:02d}/{row.gestion} ya está disponible.",
+            route="/nomina/mis-boletas")
     await record_personal_event(
         session, user, company, action="NOMINA_APROBADA", table="periodo_nomina", record_id=row.id
     )

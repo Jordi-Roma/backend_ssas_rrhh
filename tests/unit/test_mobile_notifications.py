@@ -1,59 +1,72 @@
 from datetime import UTC, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
+from uuid import UUID
 
 import pytest
+from fastapi import HTTPException
 
 from ssas.core.security.dependencies import CurrentUser
-from ssas.personal.infrastructure.http.notifications_router import my_notifications, router
+from ssas.personal.infrastructure.http.notifications_router import (
+    mark_all_read,
+    mark_read,
+    my_notifications,
+    router,
+)
 
 
-def _session(*, worker_id=None, decisions=(), pending=(), events=()):
+def _session(*, due=(), notifications=(), item=None):
     session = MagicMock()
-    session.scalar = AsyncMock(return_value=worker_id)
-    results = []
-    for rows in (decisions, pending, events):
-        result = MagicMock()
-        result.all.return_value = list(rows)
-        results.append(result)
-    session.execute = AsyncMock(return_value=results[0])
-    session.scalars = AsyncMock(side_effect=results[1:])
+    due_result = MagicMock()
+    due_result.all.return_value = list(due)
+    session.execute = AsyncMock(return_value=due_result)
+    session.scalars = AsyncMock(return_value=list(notifications))
+    session.scalar = AsyncMock(return_value=item)
     return session
 
 
-def test_notification_route_requires_authenticated_user():
-    assert [route.path for route in router.routes] == ["/notificaciones/mi"]
+def test_notification_routes_require_authentication():
+    assert {route.path for route in router.routes} >= {
+        "/notificaciones/mi", "/notificaciones/{notification_id}/leer",
+        "/notificaciones/leer-todas", "/notificaciones/dispositivos",
+    }
 
 
 @pytest.mark.asyncio
-async def test_absence_decision_only_uses_own_employee_and_tenant():
-    moment = datetime.now(UTC)
-    request = SimpleNamespace(id="request-1", estado="APROBADA", resuelto_en=moment)
-    session = _session(worker_id="employee-1", decisions=[(request, "Vacación")])
-    user = CurrentUser(id="user-1", empresa_id="company-1", roles=["EMPLEADO"])
-    result = await my_notifications(user=user, session=session)
-    assert result[0]["tipo"] == "AUSENCIA_RESUELTA"
-    sql = str(session.execute.call_args.args[0].compile())
-    assert "solicitud_ausencia.empresa_id" in sql
-    assert "solicitud_ausencia.empleado_id" in sql
-    session.scalars.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_subscription_events_are_only_shown_to_company_admin():
-    moment = datetime.now(UTC)
-    event = SimpleNamespace(id="event-1", fecha=moment, datos_nuevos_jsonb={"estado": "ACTIVA"})
-    session = _session(events=[event])
-    user = CurrentUser(id="admin-1", empresa_id="company-1", roles=["ADMIN_EMPRESA"])
-    result = await my_notifications(user=user, session=session)
-    assert result[0]["tipo"] == "SUSCRIPCION"
+async def test_inbox_is_scoped_to_current_user_and_company():
+    now = datetime.now(UTC)
+    item = SimpleNamespace(id="notice-1", tipo="BOLETA_DISPONIBLE", titulo="Boleta",
+                           mensaje="Disponible", ruta="/cuenta/mis-boletas", fecha=now, leida_en=None)
+    session = _session(notifications=[item])
+    result = await my_notifications(user=CurrentUser(id="user-1", empresa_id="company-1"), session=session)
+    assert result[0]["tipo"] == "BOLETA_DISPONIBLE"
     sql = str(session.scalars.call_args.args[0].compile())
-    assert "bitacora.empresa_id" in sql
+    assert "notificacion.empresa_id" in sql and "notificacion.usuario_id" in sql
 
 
 @pytest.mark.asyncio
-async def test_platform_user_gets_no_company_notifications():
+async def test_cannot_read_another_users_notification():
+    session = _session(item=None)
+    with pytest.raises(HTTPException) as exc:
+        await mark_read(UUID("11111111-1111-1111-1111-111111111111"),
+                        user=CurrentUser(id="user-1", empresa_id="company-1"), session=session)
+    assert exc.value.status_code == 404
+    sql = str(session.scalar.call_args.args[0].compile())
+    assert "notificacion.usuario_id" in sql and "notificacion.empresa_id" in sql
+
+
+@pytest.mark.asyncio
+async def test_mark_all_only_updates_own_unread_items():
     session = _session()
-    result = await my_notifications(user=CurrentUser(id="platform", empresa_id=None), session=session)
-    assert result == []
-    session.scalar.assert_not_awaited()
+    session.execute.return_value.rowcount = 2
+    result = await mark_all_read(user=CurrentUser(id="user-1", empresa_id="company-1"), session=session)
+    assert result == {"actualizadas": 2}
+    sql = str(session.execute.call_args.args[0].compile())
+    assert "notificacion.usuario_id" in sql and "notificacion.empresa_id" in sql
+
+
+@pytest.mark.asyncio
+async def test_platform_without_company_has_no_inbox():
+    session = _session()
+    assert await my_notifications(user=CurrentUser(id="platform", empresa_id=None), session=session) == []
+    session.execute.assert_not_awaited()

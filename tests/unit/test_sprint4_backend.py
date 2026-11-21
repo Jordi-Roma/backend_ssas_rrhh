@@ -4,12 +4,20 @@ import json
 import tarfile
 from datetime import date
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from ssas.capacitacion.router import AsignacionInput, CursoInput, LeccionInput, lesson_view, scope
+from ssas.capacitacion.router import (
+    AsignacionInput,
+    CursoInput,
+    LeccionInput,
+    certify_skill,
+    lesson_view,
+    scope,
+)
 from ssas.indicadores.router import weekdays
 from ssas.reportes.infrastructure.http.router import _document
 from ssas.reportes.infrastructure.http.schemas import ReporteConfig
@@ -41,6 +49,21 @@ def test_tenant_scope_rejects_other_company():
     with pytest.raises(HTTPException) as error:
         scope(user, "b")
     assert error.value.status_code == 403
+
+
+@pytest.mark.asyncio
+async def test_passing_course_certifies_its_skill_once():
+    session = MagicMock()
+    session.scalar = AsyncMock(return_value=None)
+    enrollment = SimpleNamespace(empresa_id="company", empleado_id="employee")
+    course = SimpleNamespace(habilidad_id="skill", id="course")
+    await certify_skill(session, enrollment, course, "teacher")
+    item = session.add.call_args.args[0]
+    assert item.empresa_id == "company" and item.habilidad_id == "skill"
+    assert item.curso_id == "course" and item.certificado_por == "teacher"
+    session.scalar.return_value = item
+    await certify_skill(session, enrollment, course, "teacher")
+    session.add.assert_called_once()
 
 
 def test_csv_export_quotes_and_blocks_spreadsheet_formula():

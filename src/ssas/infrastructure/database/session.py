@@ -34,6 +34,10 @@ async def get_session() -> AsyncIterator[AsyncSession]:
         try:
             yield session
             await session.commit()
+            pending = session.info.pop("notifications_to_push", [])
+            if pending:
+                from ssas.personal.push_service import send_pending_push
+                await send_pending_push(session, pending)
         except Exception:
             await session.rollback()
             raise

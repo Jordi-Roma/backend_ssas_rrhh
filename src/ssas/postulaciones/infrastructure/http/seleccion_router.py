@@ -195,6 +195,12 @@ async def crear_entrevista(
 ):
     repository = repo(session, user, empresa_id)
     item = await GestionarSeleccion(repository).guardar_entrevista(data.model_dump())
+    from ssas.personal.notification_service import notify
+    await notify(session, empresa_id=repository.empresa_id, usuario_id=item.entrevistador_id,
+        event_key=f"entrevista:{item.id}:{item.fecha_hora.isoformat()}",
+        kind="ENTREVISTA_PROGRAMADA", title="Entrevista programada",
+        message=f"Tienes una entrevista programada para el {item.fecha_hora:%d/%m/%Y %H:%M}.",
+        route="/entrevistas")
     await auditar(
         repository,
         request,
@@ -229,6 +235,12 @@ async def editar_entrevista(
 ):
     repository = repo(session, user, empresa_id)
     item = await GestionarSeleccion(repository).guardar_entrevista(data.model_dump(), str(id))
+    from ssas.personal.notification_service import notify
+    await notify(session, empresa_id=repository.empresa_id, usuario_id=item.entrevistador_id,
+        event_key=f"entrevista:{item.id}:{item.fecha_hora.isoformat()}",
+        kind="ENTREVISTA_PROGRAMADA", title="Entrevista reprogramada",
+        message=f"Tu entrevista se reprogramó para el {item.fecha_hora:%d/%m/%Y %H:%M}.",
+        route="/entrevistas")
     await auditar(repository, request, user, "entrevista", item.id, "Entrevista reprogramada")
     return item
 

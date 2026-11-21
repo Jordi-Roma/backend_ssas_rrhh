@@ -980,6 +980,23 @@ async def request_absence(
     )
     session.add(row)
     await session.flush()
+    from ssas.personal.notification_service import notify_roles
+    await notify_roles(session, empresa_id=user.empresa_id, roles=("ADMIN_EMPRESA", "RRHH"),
+        event_key=f"ausencia-pendiente:{row.id}", kind="AUSENCIA_PENDIENTE",
+        title="Solicitud por revisar", message="Hay una solicitud de ausencia pendiente de revisión.",
+        route="/personal/ausencias/bandeja")
+    leader_id = await session.scalar(select(ContratoModel.jefe_directo_id).where(
+        ContratoModel.empresa_id == user.empresa_id, ContratoModel.empleado_id == worker.id,
+        ContratoModel.estado == "VIGENTE", ContratoModel.jefe_directo_id.is_not(None)
+    ).order_by(ContratoModel.fecha_inicio.desc()).limit(1))
+    if leader_id:
+        from ssas.personal.notification_service import notify
+        leader_user_id = await session.scalar(select(EmpleadoModel.usuario_id).where(
+            EmpleadoModel.id == leader_id, EmpleadoModel.empresa_id == user.empresa_id))
+        await notify(session, empresa_id=user.empresa_id, usuario_id=leader_user_id,
+            event_key=f"ausencia-pendiente:{row.id}", kind="AUSENCIA_PENDIENTE",
+            title="Solicitud por revisar", message="Hay una solicitud de ausencia pendiente de revisión.",
+            route="/personal/ausencias/bandeja")
     await session.commit()
     if settings.smtp_only_email:
         background_tasks.add_task(
@@ -1167,6 +1184,20 @@ async def decide_absence(
     row.observacion_jefe = payload.observacion
     row.resuelto_por_id = user.id
     row.resuelto_en = datetime.now(UTC)
+    from sqlalchemy import update
+
+    from ssas.personal.infrastructure.persistence.notification_models import NotificacionModel
+    await session.execute(update(NotificacionModel).where(
+        NotificacionModel.empresa_id == company,
+        NotificacionModel.evento_clave == f"ausencia-pendiente:{row.id}",
+    ).values(leida_en=row.resuelto_en, titulo="Solicitud resuelta",
+             mensaje=f"La solicitud de ausencia fue {row.estado.lower()}."))
+    from ssas.personal.notification_service import notify
+    await notify(session, empresa_id=company, usuario_id=target.usuario_id,
+        event_key=f"ausencia:{row.id}:{row.estado}", kind="AUSENCIA_RESUELTA",
+        title="Ausencia aprobada" if payload.aprobar else "Ausencia rechazada",
+        message=f"Tu solicitud de {kind.nombre} fue {row.estado.lower()}.",
+        route="/personal/ausencias/mi")
     await record_personal_event(
         session,
         user,

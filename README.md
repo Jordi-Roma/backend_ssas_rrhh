@@ -48,8 +48,18 @@ La API usa el prefijo `/api/v1`. Con el servidor en marcha, [Swagger UI](http://
 | Suscripciones | `/planes`, `/suscripcion`, `/webhooks` |
 | Reportes e IA | `/dashboard`, `/reportes`, `/ayuda`, `/chatbot` |
 | Datos y respaldos | `/importaciones`, `/respaldos`, `/respaldos-empresa` |
+| Capacitación e indicadores | `/capacitacion`, `/indicadores` |
+| Notificaciones | `/notificaciones` |
 
 Ejemplos: `GET /api/v1/auth/me` consulta el usuario autenticado; `GET /api/v1/respaldos-empresa` lista respaldos según los permisos; `POST /api/v1/respaldos-empresa` solicita uno. Las rutas públicas, los métodos admitidos y los cuerpos de las solicitudes se consultan en Swagger/OpenAPI. No todas las rutas son accesibles con el mismo rol.
+
+### Habilidades y avisos del Sprint 4
+
+Un curso puede indicar `habilidad_id` al crearse o editarse como borrador. Al aprobar todas las lecciones o recibir una calificación aprobatoria, el sistema certifica esa habilidad para el empleado. `GET /capacitacion/mis-habilidades` consulta el perfil propio y `GET /capacitacion/empleados/{id}/habilidades` permite al gestor consultar el de un empleado de su empresa.
+
+`GET /notificaciones/mi` devuelve la bandeja persistente. `PATCH /notificaciones/{id}/leer` y `POST /notificaciones/leer-todas` actualizan las lecturas. El móvil registra su Firebase Installation ID (FID) en `POST /notificaciones/dispositivos` (campo `token` por compatibilidad) y lo revoca en `DELETE /notificaciones/dispositivos/{token}`. Se generan avisos al resolver ausencias, aprobar un periodo con boletas, programar entrevistas y cuando un curso obligatorio vence dentro de siete días. Un proceso horario revisa los vencimientos; consultar la bandeja también los registra si aún no existían.
+
+Para enviar push, configurar en el servidor `GOOGLE_APPLICATION_CREDENTIALS` con la ruta a una cuenta de servicio del proyecto Firebase o `FIREBASE_SERVICE_ACCOUNT_JSON` con su JSON completo como secreto de Railway. Habilitar Cloud Messaging y registrar la app Flutter en el mismo proyecto. Sin esa credencial, los avisos siguen disponibles en la bandeja, pero no llegan como push.
 
 ## Comprobaciones de desarrollo
 
