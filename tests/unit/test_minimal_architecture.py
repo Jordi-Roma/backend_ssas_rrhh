@@ -69,6 +69,11 @@ def test_schema_contains_only_current_scope_tables() -> None:
         "boleta_detalle",
         "impuesto_empleado",
         "haber_proporcional",
+        "curso",
+        "leccion",
+        "inscripcion",
+        "progreso_leccion",
+        "empleado_habilidad",
     }
 
 
@@ -116,6 +121,8 @@ def test_openapi_is_grouped_and_summarizes_every_business_operation() -> None:
         "Chatbot",
         "Respaldos por empresa",
         "Personal",
+        "Capacitación",
+        "Indicadores",
     }
 
     assert {tag["name"] for tag in schema["tags"]} == expected_tags

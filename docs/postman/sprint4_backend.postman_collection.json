@@ -1,0 +1,5676 @@
+{
+  "info": {
+    "name": "SSAS RRHH - contrato final Sprint 4",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Iniciar sesión [POST /api/v1/auth/login]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Autentica mediante correo o nombre de usuario. Omite `empresa_slug` para una cuenta de plataforma; envíalo para buscar la cuenta dentro de una empresa. Los intentos fallidos se registran y pueden bloquear temporalmente la cuenta.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Renovar sesión [POST /api/v1/auth/refresh]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/refresh",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "refresh"
+          ]
+        },
+        "description": "Intercambia un refresh token activo por un nuevo par de tokens y revoca el refresh token anterior.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Cerrar sesión [POST /api/v1/auth/logout]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/logout",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "logout"
+          ]
+        },
+        "description": "Revoca el refresh token enviado. Requiere un access token válido.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar mi perfil [GET /api/v1/auth/me]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "me"
+          ]
+        },
+        "description": "Devuelve la identidad autenticada, su empresa cuando corresponda, roles, permisos efectivos, módulos habilitados y estado de seguridad. Es la fuente única que usa el cliente para construir el menú y decidir qué acciones muestra."
+      }
+    },
+    {
+      "name": "Solicitar recuperación de contraseña [POST /api/v1/auth/password/forgot]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/password/forgot",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "password",
+            "forgot"
+          ]
+        },
+        "description": "Solicita un enlace de recuperación sin revelar si la cuenta existe. Omite `empresa_slug` para cuentas de plataforma.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Cambiar mi contraseña [POST /api/v1/auth/password/change]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/password/change",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "password",
+            "change"
+          ]
+        },
+        "description": "Valida la contraseña actual, aplica la política de seguridad, actualiza la clave y revoca las sesiones existentes.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Reenviar verificación de correo [POST /api/v1/auth/email/verification/resend]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/email/verification/resend",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "email",
+            "verification",
+            "resend"
+          ]
+        },
+        "description": "Genera un nuevo enlace cuando la cuenta existe y su correo continúa pendiente de verificación.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Verificar correo electrónico [POST /api/v1/auth/email/verify]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/email/verify",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "email",
+            "verify"
+          ]
+        },
+        "description": "Confirma el correo mediante un token de verificación vigente y de un solo uso.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Restablecer contraseña [POST /api/v1/auth/password/reset]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/password/reset",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "password",
+            "reset"
+          ]
+        },
+        "description": "Establece una contraseña nueva mediante el token de recuperación y revoca las sesiones anteriores.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Registrar nueva empresa y administrador [POST /api/v1/auth/registro-empresa]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/auth/registro-empresa",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "registro-empresa"
+          ]
+        },
+        "description": "Permite el auto-registro público de un nuevo tenant con su cuenta administradora inicial.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Preguntas [GET /api/v1/ayuda/preguntas]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/ayuda/preguntas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "ayuda",
+            "preguntas"
+          ]
+        },
+        "description": "Consulta guías autorizadas. La IA optativa recibe solo contenido fijo de la guía."
+      }
+    },
+    {
+      "name": "Consultar [POST /api/v1/ayuda/consultar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/ayuda/consultar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "ayuda",
+            "consultar"
+          ]
+        },
+        "description": "Consulta guías autorizadas. La IA optativa recibe solo contenido fijo de la guía.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Explicar Articulo [POST /api/v1/ayuda/articulos/{article_id}/explicar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/ayuda/articulos/{{article_id}}/explicar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "ayuda",
+            "articulos",
+            "{{article_id}}",
+            "explicar"
+          ]
+        },
+        "description": "Consulta guías autorizadas. La IA optativa recibe solo contenido fijo de la guía."
+      }
+    },
+    {
+      "name": "List Articles [GET /api/v1/chatbot/articulos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/articulos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "articulos"
+          ]
+        },
+        "description": "Lista artículos de conocimiento de la empresa autenticada."
+      }
+    },
+    {
+      "name": "Create Article [POST /api/v1/chatbot/articulos]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/articulos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "articulos"
+          ]
+        },
+        "description": "Crea e indexa un artículo de conocimiento de la empresa.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Read Article [GET /api/v1/chatbot/articulos/{article_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/articulos/{{article_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "articulos",
+            "{{article_id}}"
+          ]
+        },
+        "description": "Consulta un artículo publicado de la empresa."
+      }
+    },
+    {
+      "name": "Update Article [PUT /api/v1/chatbot/articulos/{article_id}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/articulos/{{article_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "articulos",
+            "{{article_id}}"
+          ]
+        },
+        "description": "Actualiza y reindexa un artículo de conocimiento de la empresa.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Delete Article [DELETE /api/v1/chatbot/articulos/{article_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/articulos/{{article_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "articulos",
+            "{{article_id}}"
+          ]
+        },
+        "description": "Elimina un artículo y sus fragmentos indexados."
+      }
+    },
+    {
+      "name": "Suggestions [GET /api/v1/chatbot/sugerencias]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/sugerencias",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "sugerencias"
+          ]
+        },
+        "description": "Sugiere preguntas basadas en artículos publicados de la empresa."
+      }
+    },
+    {
+      "name": "Public Suggestions [GET /api/v1/chatbot/publico/{slug}/sugerencias]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/publico/{{slug}}/sugerencias",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "publico",
+            "{{slug}}",
+            "sugerencias"
+          ]
+        },
+        "description": "Sugiere preguntas públicas de una empresa activa."
+      }
+    },
+    {
+      "name": "Public Read Article [GET /api/v1/chatbot/publico/{slug}/articulos/{article_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/publico/{{slug}}/articulos/{{article_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "publico",
+            "{{slug}}",
+            "articulos",
+            "{{article_id}}"
+          ]
+        },
+        "description": "Consulta un artículo público publicado por la empresa."
+      }
+    },
+    {
+      "name": "Message [POST /api/v1/chatbot/mensajes]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/mensajes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "mensajes"
+          ]
+        },
+        "description": "Responde con conocimiento publicado de la empresa autenticada.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Public Message [POST /api/v1/chatbot/publico/{slug}/mensajes]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/chatbot/publico/{{slug}}/mensajes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "chatbot",
+            "publico",
+            "{{slug}}",
+            "mensajes"
+          ]
+        },
+        "description": "Responde con conocimiento público publicado por la empresa.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar eventos de bitácora [GET /api/v1/bitacora]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/bitacora",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "bitacora"
+          ]
+        },
+        "description": "Lista eventos inmutables con filtros por actor, módulo, acción y fechas. Un usuario empresarial solo consulta su empresa; plataforma puede seleccionar una empresa. Permisos: `bitacora:ver` o `platform:bitacora:ver`."
+      }
+    },
+    {
+      "name": "Verificar integridad de la bitácora [GET /api/v1/bitacora/integridad]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/bitacora/integridad",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "bitacora",
+            "integridad"
+          ]
+        },
+        "description": "Recorre la cadena de hashes del alcance autorizado y señala el primer evento alterado o ausente, sin descifrar ni exponer su contenido."
+      }
+    },
+    {
+      "name": "Exportar archivo confidencial de bitácora [GET /api/v1/bitacora/exportar-cifrada]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/bitacora/exportar-cifrada",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "bitacora",
+            "exportar-cifrada"
+          ]
+        },
+        "description": "Descarga los eventos como JSON Lines con sobres AES-GCM y hashes de integridad. El archivo no contiene la llave ni detalles en texto claro."
+      }
+    },
+    {
+      "name": "Consultar detalle de un evento [GET /api/v1/bitacora/{audit_log_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/bitacora/{{audit_log_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "bitacora",
+            "{{audit_log_id}}"
+          ]
+        },
+        "description": "Obtiene un evento específico con su contexto, datos anteriores y datos nuevos, respetando el alcance de empresa."
+      }
+    },
+    {
+      "name": "Cursos [GET /api/v1/capacitacion/cursos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/cursos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "cursos"
+          ]
+        },
+        "description": "Cursos"
+      }
+    },
+    {
+      "name": "Crear Curso [POST /api/v1/capacitacion/cursos]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/cursos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "cursos"
+          ]
+        },
+        "description": "Crear Curso",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Curso [GET /api/v1/capacitacion/cursos/{curso_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/cursos/{{curso_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "cursos",
+            "{{curso_id}}"
+          ]
+        },
+        "description": "Curso"
+      }
+    },
+    {
+      "name": "Editar Curso [PATCH /api/v1/capacitacion/cursos/{curso_id}]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/cursos/{{curso_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "cursos",
+            "{{curso_id}}"
+          ]
+        },
+        "description": "Editar Curso",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Borrar Curso [DELETE /api/v1/capacitacion/cursos/{curso_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/cursos/{{curso_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "cursos",
+            "{{curso_id}}"
+          ]
+        },
+        "description": "Borrar Curso"
+      }
+    },
+    {
+      "name": "Publicar [POST /api/v1/capacitacion/cursos/{curso_id}/publicar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/cursos/{{curso_id}}/publicar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "cursos",
+            "{{curso_id}}",
+            "publicar"
+          ]
+        },
+        "description": "Publicar"
+      }
+    },
+    {
+      "name": "Lecciones [GET /api/v1/capacitacion/cursos/{curso_id}/lecciones]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/cursos/{{curso_id}}/lecciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "cursos",
+            "{{curso_id}}",
+            "lecciones"
+          ]
+        },
+        "description": "Lecciones"
+      }
+    },
+    {
+      "name": "Crear Leccion [POST /api/v1/capacitacion/cursos/{curso_id}/lecciones]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/cursos/{{curso_id}}/lecciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "cursos",
+            "{{curso_id}}",
+            "lecciones"
+          ]
+        },
+        "description": "Crear Leccion",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Editar Leccion [PATCH /api/v1/capacitacion/lecciones/{leccion_id}]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/lecciones/{{leccion_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "lecciones",
+            "{{leccion_id}}"
+          ]
+        },
+        "description": "Editar Leccion",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Borrar Leccion [DELETE /api/v1/capacitacion/lecciones/{leccion_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/lecciones/{{leccion_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "lecciones",
+            "{{leccion_id}}"
+          ]
+        },
+        "description": "Borrar Leccion"
+      }
+    },
+    {
+      "name": "Subir Material [POST /api/v1/capacitacion/materiales]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/materiales",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "materiales"
+          ]
+        },
+        "description": "Subir Material"
+      }
+    },
+    {
+      "name": "Descargar Material [GET /api/v1/capacitacion/materiales/{nombre}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/materiales/{{nombre}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "materiales",
+            "{{nombre}}"
+          ]
+        },
+        "description": "Descargar Material"
+      }
+    },
+    {
+      "name": "Asignar [POST /api/v1/capacitacion/inscripciones]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/inscripciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "inscripciones"
+          ]
+        },
+        "description": "Asignar",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Inscripciones [GET /api/v1/capacitacion/inscripciones]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/inscripciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "inscripciones"
+          ]
+        },
+        "description": "Inscripciones"
+      }
+    },
+    {
+      "name": "Mis Cursos [GET /api/v1/capacitacion/mis-cursos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/mis-cursos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "mis-cursos"
+          ]
+        },
+        "description": "Mis Cursos"
+      }
+    },
+    {
+      "name": "Completar [POST /api/v1/capacitacion/inscripciones/{inscripcion_id}/lecciones/{leccion_id}/completar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/inscripciones/{{inscripcion_id}}/lecciones/{{leccion_id}}/completar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "inscripciones",
+            "{{inscripcion_id}}",
+            "lecciones",
+            "{{leccion_id}}",
+            "completar"
+          ]
+        },
+        "description": "Completar",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Calificar [POST /api/v1/capacitacion/inscripciones/{inscripcion_id}/calificar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/inscripciones/{{inscripcion_id}}/calificar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "inscripciones",
+            "{{inscripcion_id}}",
+            "calificar"
+          ]
+        },
+        "description": "Calificar",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Certificado [GET /api/v1/capacitacion/inscripciones/{inscripcion_id}/certificado]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/inscripciones/{{inscripcion_id}}/certificado",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "inscripciones",
+            "{{inscripcion_id}}",
+            "certificado"
+          ]
+        },
+        "description": "Certificado"
+      }
+    },
+    {
+      "name": "Registrar Habilidad [POST /api/v1/capacitacion/empleado-habilidades]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/capacitacion/empleado-habilidades",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "capacitacion",
+            "empleado-habilidades"
+          ]
+        },
+        "description": "Registrar Habilidad",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Listar departamentos [GET /api/v1/departamentos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/departamentos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "departamentos"
+          ]
+        },
+        "description": "Lista departamentos del alcance autorizado. Permisos: `departamentos:ver` o `platform:organizacion:gestionar`."
+      }
+    },
+    {
+      "name": "Crear departamento [POST /api/v1/departamentos]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/departamentos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "departamentos"
+          ]
+        },
+        "description": "Crea un departamento dentro de la empresa autorizada. Requiere `departamentos:crear` o `platform:organizacion:gestionar`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Actualizar departamento [PUT /api/v1/departamentos/{departamento_id}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/departamentos/{{departamento_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "departamentos",
+            "{{departamento_id}}"
+          ]
+        },
+        "description": "Actualiza un departamento de la empresa autorizada. Requiere `departamentos:editar` o `platform:organizacion:gestionar`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Eliminar departamento [DELETE /api/v1/departamentos/{departamento_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/departamentos/{{departamento_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "departamentos",
+            "{{departamento_id}}"
+          ]
+        },
+        "description": "Elimina un departamento sin dependencias dentro de la empresa autorizada. Requiere `departamentos:eliminar` o `platform:organizacion:gestionar`."
+      }
+    },
+    {
+      "name": "Listar Habilidades [GET /api/v1/habilidades]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/habilidades",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "habilidades"
+          ]
+        },
+        "description": "Lista las habilidades de la empresa."
+      }
+    },
+    {
+      "name": "Crear Habilidad [POST /api/v1/habilidades]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/habilidades",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "habilidades"
+          ]
+        },
+        "description": "Crea una habilidad para la empresa autorizada.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Actualizar habilidad [PUT /api/v1/habilidades/{habilidad_id}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/habilidades/{{habilidad_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "habilidades",
+            "{{habilidad_id}}"
+          ]
+        },
+        "description": "Actualiza una habilidad de la empresa autorizada.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Eliminar Habilidad [DELETE /api/v1/habilidades/{habilidad_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/habilidades/{{habilidad_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "habilidades",
+            "{{habilidad_id}}"
+          ]
+        },
+        "description": "Elimina una habilidad de la empresa autorizada."
+      }
+    },
+    {
+      "name": "Plantilla [GET /api/v1/importaciones/{kind}/plantilla]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/importaciones/{{kind}}/plantilla",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "importaciones",
+            "{{kind}}",
+            "plantilla"
+          ]
+        },
+        "description": "Operación de importación CSV/Excel limitada a la empresa autorizada."
+      }
+    },
+    {
+      "name": "Previsualizar [POST /api/v1/importaciones/{kind}/previsualizar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/importaciones/{{kind}}/previsualizar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "importaciones",
+            "{{kind}}",
+            "previsualizar"
+          ]
+        },
+        "description": "Operación de importación CSV/Excel limitada a la empresa autorizada."
+      }
+    },
+    {
+      "name": "Confirmar [POST /api/v1/importaciones/{kind}/confirmar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/importaciones/{{kind}}/confirmar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "importaciones",
+            "{{kind}}",
+            "confirmar"
+          ]
+        },
+        "description": "Operación de importación CSV/Excel limitada a la empresa autorizada."
+      }
+    },
+    {
+      "name": "Indicadores de recursos humanos por empresa [GET /api/v1/indicadores]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/indicadores",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "indicadores"
+          ]
+        },
+        "description": "Indicadores de recursos humanos por empresa"
+      }
+    },
+    {
+      "name": "Listar cargos [GET /api/v1/cargos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/cargos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "cargos"
+          ]
+        },
+        "description": "Lista cargos del alcance autorizado. Permisos: `cargos:ver` o `platform:organizacion:gestionar`."
+      }
+    },
+    {
+      "name": "Crear cargo [POST /api/v1/cargos]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/cargos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "cargos"
+          ]
+        },
+        "description": "Crea un cargo dentro de la empresa autorizada y valida que su departamento pertenezca al mismo alcance. Requiere `cargos:crear` o `platform:organizacion:gestionar`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Actualizar cargo [PUT /api/v1/cargos/{cargo_id}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/cargos/{{cargo_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "cargos",
+            "{{cargo_id}}"
+          ]
+        },
+        "description": "Actualiza un cargo de la empresa autorizada y valida el departamento indicado. Requiere `cargos:editar` o `platform:organizacion:gestionar`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Eliminar cargo [DELETE /api/v1/cargos/{cargo_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/cargos/{{cargo_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "cargos",
+            "{{cargo_id}}"
+          ]
+        },
+        "description": "Elimina un cargo sin dependencias dentro de la empresa autorizada. Requiere `cargos:eliminar` o `platform:organizacion:gestionar`."
+      }
+    },
+    {
+      "name": "Consultar resumen del dashboard [GET /api/v1/dashboard/resumen]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/dashboard/resumen",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "dashboard",
+            "resumen"
+          ]
+        },
+        "description": "Devuelve el resumen agregado de la pantalla de inicio. Un usuario de empresa (permiso `empresa:ver`) recibe los totales de su propia empresa; un administrador de plataforma (permiso `platform:empresas:ver`) recibe los totales globales. En ambos casos se incluyen las cinco últimas entradas de bitácora del alcance correspondiente."
+      }
+    },
+    {
+      "name": "Catálogo de módulos [GET /api/v1/modulos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/modulos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "modulos"
+          ]
+        },
+        "description": "Catálogo global de módulos de la plataforma. Es información de producto, disponible para cualquier identidad autenticada."
+      }
+    },
+    {
+      "name": "Módulos de una empresa [GET /api/v1/empresas/{empresa_id}/modulos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas/{{empresa_id}}/modulos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas",
+            "{{empresa_id}}",
+            "modulos"
+          ]
+        },
+        "description": "Catálogo con el estado de habilitación de cada módulo para la empresa indicada. Los módulos núcleo aparecen siempre habilitados."
+      }
+    },
+    {
+      "name": "Habilitar módulos de una empresa [PUT /api/v1/empresas/{empresa_id}/modulos]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas/{{empresa_id}}/modulos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas",
+            "{{empresa_id}}",
+            "modulos"
+          ]
+        },
+        "description": "Reemplaza el conjunto de módulos habilitados. Los módulos núcleo no se pueden deshabilitar. Operación exclusiva de administradores de la plataforma.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Listar empresas [GET /api/v1/empresas]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas"
+          ]
+        },
+        "description": "Lista empresas con búsqueda, estado y paginación. Operación exclusiva de plataforma; requiere `platform:empresas:ver`."
+      }
+    },
+    {
+      "name": "Aprovisionar empresa [POST /api/v1/empresas]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas"
+          ]
+        },
+        "description": "Crea la empresa, su administrador inicial y la información de acceso necesaria. Operación exclusiva de plataforma; requiere `platform:empresas:crear`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar empresa [GET /api/v1/empresas/{empresa_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas/{{empresa_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas",
+            "{{empresa_id}}"
+          ]
+        },
+        "description": "Plataforma puede consultar cualquier empresa. Un administrador empresarial solo puede consultar la empresa incluida en su token. Permisos: `empresa:ver` o `platform:empresas:ver`."
+      }
+    },
+    {
+      "name": "Actualizar empresa [PATCH /api/v1/empresas/{empresa_id}]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas/{{empresa_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas",
+            "{{empresa_id}}"
+          ]
+        },
+        "description": "Actualiza únicamente los campos enviados. El NIT y el slug deben continuar siendo únicos. Permisos: `empresa:editar` o `platform:empresas:editar`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Eliminar empresa [DELETE /api/v1/empresas/{empresa_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas/{{empresa_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas",
+            "{{empresa_id}}"
+          ]
+        },
+        "description": "Elimina lógicamente la empresa, desactiva sus usuarios y revoca todas sus sesiones. Conserva la información y la bitácora. Operación exclusiva de plataforma; requiere `platform:empresas:eliminar`."
+      }
+    },
+    {
+      "name": "Activar empresa [PATCH /api/v1/empresas/{empresa_id}/activar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas/{{empresa_id}}/activar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas",
+            "{{empresa_id}}",
+            "activar"
+          ]
+        },
+        "description": "Habilita nuevamente la empresa. Operación exclusiva de plataforma; requiere `platform:empresas:suspender`."
+      }
+    },
+    {
+      "name": "Suspender empresa [PATCH /api/v1/empresas/{empresa_id}/suspender]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas/{{empresa_id}}/suspender",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas",
+            "{{empresa_id}}",
+            "suspender"
+          ]
+        },
+        "description": "Suspende el acceso empresarial sin eliminar sus datos. Operación exclusiva de plataforma; requiere `platform:empresas:suspender`."
+      }
+    },
+    {
+      "name": "Restaurar empresa [PATCH /api/v1/empresas/{empresa_id}/restaurar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empresas/{{empresa_id}}/restaurar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empresas",
+            "{{empresa_id}}",
+            "restaurar"
+          ]
+        },
+        "description": "Recupera una empresa eliminada y la mantiene suspendida. Después debe usarse `/activar` para habilitar nuevamente el acceso. Operación exclusiva de plataforma; requiere `platform:empresas:restaurar`."
+      }
+    },
+    {
+      "name": "Listar parámetros legales [GET /api/v1/parametros-legales]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/parametros-legales",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "parametros-legales"
+          ]
+        },
+        "description": "Lista los periodos de parámetros legales de la empresa autorizada, ordenados del más reciente al más antiguo; solo lectura. Permisos: `empresa:ver` o `platform:empresas:ver`."
+      }
+    },
+    {
+      "name": "Registrar periodo de parámetros legales [POST /api/v1/parametros-legales]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/parametros-legales",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "parametros-legales"
+          ]
+        },
+        "description": "Crea un periodo de vigencia con los parámetros legales (AFP, aporte solidario, RC-IVA, aguinaldo, prima). Valida rango y evita solapamientos con otros periodos. Requiere `empresa:editar` o `platform:empresas:editar`. Queda registrado en la bitácora.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Actualizar periodo de parámetros legales [PUT /api/v1/parametros-legales/{periodo_id}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/parametros-legales/{{periodo_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "parametros-legales",
+            "{{periodo_id}}"
+          ]
+        },
+        "description": "Actualiza los parámetros o la vigencia de un periodo de la empresa autorizada, manteniendo el historial. Valida solapamientos contra los demás periodos. Requiere `empresa:editar` o `platform:empresas:editar`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar documentos del legajo [GET /api/v1/personal/empleados/{empleado_id}/documentos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/empleados/{{empleado_id}}/documentos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "empleados",
+            "{{empleado_id}}",
+            "documentos"
+          ]
+        },
+        "description": "Consultar documentos del legajo"
+      }
+    },
+    {
+      "name": "Agregar documento privado al legajo [POST /api/v1/personal/empleados/{empleado_id}/documentos]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/empleados/{{empleado_id}}/documentos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "empleados",
+            "{{empleado_id}}",
+            "documentos"
+          ]
+        },
+        "description": "Agregar documento privado al legajo"
+      }
+    },
+    {
+      "name": "Consultar mi legajo [GET /api/v1/personal/mi/documentos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/documentos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "documentos"
+          ]
+        },
+        "description": "Consultar mi legajo"
+      }
+    },
+    {
+      "name": "Agregar comprobante a mi legajo [POST /api/v1/personal/mi/documentos]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/documentos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "documentos"
+          ]
+        },
+        "description": "Agregar comprobante a mi legajo"
+      }
+    },
+    {
+      "name": "Descargar documento del legajo [GET /api/v1/personal/empleados/{empleado_id}/documentos/{documento_id}/descarga]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/empleados/{{empleado_id}}/documentos/{{documento_id}}/descarga",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "empleados",
+            "{{empleado_id}}",
+            "documentos",
+            "{{documento_id}}",
+            "descarga"
+          ]
+        },
+        "description": "Descargar documento del legajo"
+      }
+    },
+    {
+      "name": "Consultar historial de contratos [GET /api/v1/personal/empleados/{empleado_id}/contratos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/empleados/{{empleado_id}}/contratos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "empleados",
+            "{{empleado_id}}",
+            "contratos"
+          ]
+        },
+        "description": "Consultar historial de contratos"
+      }
+    },
+    {
+      "name": "Registrar nueva version de contrato [POST /api/v1/personal/empleados/{empleado_id}/contratos]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/empleados/{{empleado_id}}/contratos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "empleados",
+            "{{empleado_id}}",
+            "contratos"
+          ]
+        },
+        "description": "Registrar nueva version de contrato",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar mis contratos [GET /api/v1/personal/mi/contratos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/contratos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "contratos"
+          ]
+        },
+        "description": "Consultar mis contratos"
+      }
+    },
+    {
+      "name": "Descargar documento propio [GET /api/v1/personal/mi/documentos/{documento_id}/descarga]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/documentos/{{documento_id}}/descarga",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "documentos",
+            "{{documento_id}}",
+            "descarga"
+          ]
+        },
+        "description": "Descargar documento propio"
+      }
+    },
+    {
+      "name": "Asignar saldo anual de vacaciones [PUT /api/v1/personal/empleados/{empleado_id}/vacaciones/{gestion}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/empleados/{{empleado_id}}/vacaciones/{{gestion}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "empleados",
+            "{{empleado_id}}",
+            "vacaciones",
+            "{{gestion}}"
+          ]
+        },
+        "description": "Asignar saldo anual de vacaciones",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar tipos de ausencia [GET /api/v1/personal/tipos-ausencia]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/tipos-ausencia",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "tipos-ausencia"
+          ]
+        },
+        "description": "Consultar tipos de ausencia"
+      }
+    },
+    {
+      "name": "Crear tipo de ausencia [POST /api/v1/personal/tipos-ausencia]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/tipos-ausencia",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "tipos-ausencia"
+          ]
+        },
+        "description": "Crear tipo de ausencia",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Administrar tipos de ausencia [GET /api/v1/personal/tipos-ausencia/configuracion]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/tipos-ausencia/configuracion",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "tipos-ausencia",
+            "configuracion"
+          ]
+        },
+        "description": "Administrar tipos de ausencia"
+      }
+    },
+    {
+      "name": "Editar tipo de ausencia [PUT /api/v1/personal/tipos-ausencia/{tipo_id}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/tipos-ausencia/{{tipo_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "tipos-ausencia",
+            "{{tipo_id}}"
+          ]
+        },
+        "description": "Editar tipo de ausencia",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Marcar entrada con GPS [POST /api/v1/personal/mi/asistencia/entrada]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/asistencia/entrada",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "asistencia",
+            "entrada"
+          ]
+        },
+        "description": "Marcar entrada con GPS",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Marcar salida con GPS [POST /api/v1/personal/mi/asistencia/salida]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/asistencia/salida",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "asistencia",
+            "salida"
+          ]
+        },
+        "description": "Marcar salida con GPS",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar mis asistencias [GET /api/v1/personal/mi/asistencia]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/asistencia",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "asistencia"
+          ]
+        },
+        "description": "Consultar mis asistencias"
+      }
+    },
+    {
+      "name": "Consultar asistencia de la empresa [GET /api/v1/personal/asistencias]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/asistencias",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "asistencias"
+          ]
+        },
+        "description": "Consultar asistencia de la empresa"
+      }
+    },
+    {
+      "name": "Consultar asistencia de mi equipo [GET /api/v1/personal/mi/equipo/asistencias]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/equipo/asistencias",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "equipo",
+            "asistencias"
+          ]
+        },
+        "description": "Consultar asistencia de mi equipo"
+      }
+    },
+    {
+      "name": "Consultar mis solicitudes [GET /api/v1/personal/mi/ausencias]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/ausencias",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "ausencias"
+          ]
+        },
+        "description": "Consultar mis solicitudes"
+      }
+    },
+    {
+      "name": "Solicitar ausencia [POST /api/v1/personal/mi/ausencias]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/ausencias",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "ausencias"
+          ]
+        },
+        "description": "Solicitar ausencia",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar solicitudes de la empresa [GET /api/v1/personal/ausencias]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/ausencias",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "ausencias"
+          ]
+        },
+        "description": "Consultar solicitudes de la empresa"
+      }
+    },
+    {
+      "name": "Consultar solicitudes de mi equipo [GET /api/v1/personal/mi/equipo/ausencias]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/equipo/ausencias",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "equipo",
+            "ausencias"
+          ]
+        },
+        "description": "Consultar solicitudes de mi equipo"
+      }
+    },
+    {
+      "name": "Aprobar o rechazar ausencia [POST /api/v1/personal/ausencias/{solicitud_id}/decision]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/ausencias/{{solicitud_id}}/decision",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "ausencias",
+            "{{solicitud_id}}",
+            "decision"
+          ]
+        },
+        "description": "Aprobar o rechazar ausencia",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar mi saldo de vacaciones [GET /api/v1/personal/mi/vacaciones]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/vacaciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "vacaciones"
+          ]
+        },
+        "description": "Consultar mi saldo de vacaciones"
+      }
+    },
+    {
+      "name": "Consultar mi equipo y su asistencia de hoy [GET /api/v1/personal/mi/equipo/resumen]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/equipo/resumen",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "equipo",
+            "resumen"
+          ]
+        },
+        "description": "Consultar mi equipo y su asistencia de hoy"
+      }
+    },
+    {
+      "name": "Consultar solicitudes para mi aprobación [GET /api/v1/personal/mi/equipo/ausencias/resumen]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/equipo/ausencias/resumen",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "equipo",
+            "ausencias",
+            "resumen"
+          ]
+        },
+        "description": "Consultar solicitudes para mi aprobación"
+      }
+    },
+    {
+      "name": "Consultar avisos de mi empresa [GET /api/v1/notificaciones/mi]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/notificaciones/mi",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "notificaciones",
+            "mi"
+          ]
+        },
+        "description": "Consultar avisos de mi empresa"
+      }
+    },
+    {
+      "name": "Solicitar correccion de fichaje [POST /api/v1/personal/mi/asistencia/correcciones]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/asistencia/correcciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "asistencia",
+            "correcciones"
+          ]
+        },
+        "description": "Solicitar correccion de fichaje",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Resolver correccion como jefe directo [POST /api/v1/personal/asistencia/correcciones/{solicitud_id}/decision]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/asistencia/correcciones/{{solicitud_id}}/decision",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "asistencia",
+            "correcciones",
+            "{{solicitud_id}}",
+            "decision"
+          ]
+        },
+        "description": "Resolver correccion como jefe directo",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Solicitar horas extra fichadas [POST /api/v1/personal/mi/asistencia/horas-extra]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/asistencia/horas-extra",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "asistencia",
+            "horas-extra"
+          ]
+        },
+        "description": "Solicitar horas extra fichadas",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Confirmar horas extra como jefe directo [POST /api/v1/personal/asistencia/horas-extra/{solicitud_id}/jefe]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/asistencia/horas-extra/{{solicitud_id}}/jefe",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "asistencia",
+            "horas-extra",
+            "{{solicitud_id}}",
+            "jefe"
+          ]
+        },
+        "description": "Confirmar horas extra como jefe directo",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Autorizar horas extra para nomina [POST /api/v1/personal/asistencia/horas-extra/{solicitud_id}/rrhh]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/asistencia/horas-extra/{{solicitud_id}}/rrhh",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "asistencia",
+            "horas-extra",
+            "{{solicitud_id}}",
+            "rrhh"
+          ]
+        },
+        "description": "Autorizar horas extra para nomina",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar mis ajustes de asistencia [GET /api/v1/personal/mi/asistencia/ajustes]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/asistencia/ajustes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "asistencia",
+            "ajustes"
+          ]
+        },
+        "description": "Consultar mis ajustes de asistencia"
+      }
+    },
+    {
+      "name": "Consultar ajustes pendientes de mi equipo [GET /api/v1/personal/mi/equipo/asistencia/ajustes]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/mi/equipo/asistencia/ajustes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "mi",
+            "equipo",
+            "asistencia",
+            "ajustes"
+          ]
+        },
+        "description": "Consultar ajustes pendientes de mi equipo"
+      }
+    },
+    {
+      "name": "Consultar horas extra pendientes de RRHH [GET /api/v1/personal/asistencia/horas-extra/pendientes-rrhh]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/personal/asistencia/horas-extra/pendientes-rrhh",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "personal",
+            "asistencia",
+            "horas-extra",
+            "pendientes-rrhh"
+          ]
+        },
+        "description": "Consultar horas extra pendientes de RRHH"
+      }
+    },
+    {
+      "name": "Registrar salario minimo legal verificado [POST /api/v1/nomina/salario-minimo]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/salario-minimo",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "salario-minimo"
+          ]
+        },
+        "description": "Registrar salario minimo legal verificado",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar tasas salariales y vigencias [GET /api/v1/nomina/parametros-legales]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/parametros-legales",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "parametros-legales"
+          ]
+        },
+        "description": "Consultar tasas salariales y vigencias"
+      }
+    },
+    {
+      "name": "Registrar tasa legal verificada [POST /api/v1/nomina/parametros-legales/{codigo}]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/parametros-legales/{{codigo}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "parametros-legales",
+            "{{codigo}}"
+          ]
+        },
+        "description": "Registrar tasa legal verificada",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar estructura salarial [GET /api/v1/nomina/estructura]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/estructura",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "estructura"
+          ]
+        },
+        "description": "Consultar estructura salarial"
+      }
+    },
+    {
+      "name": "Agregar regla salarial validada [POST /api/v1/nomina/estructura/reglas]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/estructura/reglas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "estructura",
+            "reglas"
+          ]
+        },
+        "description": "Agregar regla salarial validada",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Listar periodos de nomina [GET /api/v1/nomina/periodos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/periodos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "periodos"
+          ]
+        },
+        "description": "Listar periodos de nomina"
+      }
+    },
+    {
+      "name": "Abrir periodo de nomina [POST /api/v1/nomina/periodos]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/periodos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "periodos"
+          ]
+        },
+        "description": "Abrir periodo de nomina",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Registrar importe retenido de planilla tributaria [PUT /api/v1/nomina/periodos/{periodo_id}/rc-iva]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/periodos/{{periodo_id}}/rc-iva",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "periodos",
+            "{{periodo_id}}",
+            "rc-iva"
+          ]
+        },
+        "description": "Registrar importe retenido de planilla tributaria",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Registrar datos F110 y saldo para calculo automatico RC-IVA [PUT /api/v1/nomina/periodos/{periodo_id}/rc-iva/datos]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/periodos/{{periodo_id}}/rc-iva/datos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "periodos",
+            "{{periodo_id}}",
+            "rc-iva",
+            "datos"
+          ]
+        },
+        "description": "Registrar datos F110 y saldo para calculo automatico RC-IVA",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Registrar haber proporcional revisado para ingreso, salida o ausencia sin goce [PUT /api/v1/nomina/periodos/{periodo_id}/haber-proporcional]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/periodos/{{periodo_id}}/haber-proporcional",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "periodos",
+            "{{periodo_id}}",
+            "haber-proporcional"
+          ]
+        },
+        "description": "Registrar haber proporcional revisado para ingreso, salida o ausencia sin goce",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Previsualizar haber proporcional por dias calendario [GET /api/v1/nomina/periodos/{periodo_id}/haber-proporcional/sugerencia]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/periodos/{{periodo_id}}/haber-proporcional/sugerencia",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "periodos",
+            "{{periodo_id}}",
+            "haber-proporcional",
+            "sugerencia"
+          ]
+        },
+        "description": "Previsualizar haber proporcional por dias calendario"
+      }
+    },
+    {
+      "name": "Calcular nomina con parametros vigentes [POST /api/v1/nomina/periodos/{periodo_id}/calcular]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/periodos/{{periodo_id}}/calcular",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "periodos",
+            "{{periodo_id}}",
+            "calcular"
+          ]
+        },
+        "description": "Calcular nomina con parametros vigentes"
+      }
+    },
+    {
+      "name": "Aprobar nomina calculada [POST /api/v1/nomina/periodos/{periodo_id}/aprobar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/periodos/{{periodo_id}}/aprobar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "periodos",
+            "{{periodo_id}}",
+            "aprobar"
+          ]
+        },
+        "description": "Aprobar nomina calculada"
+      }
+    },
+    {
+      "name": "Consultar boletas de un periodo [GET /api/v1/nomina/periodos/{periodo_id}/boletas]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/periodos/{{periodo_id}}/boletas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "periodos",
+            "{{periodo_id}}",
+            "boletas"
+          ]
+        },
+        "description": "Consultar boletas de un periodo"
+      }
+    },
+    {
+      "name": "Consultar mis boletas aprobadas [GET /api/v1/nomina/mi/boletas]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/mi/boletas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "mi",
+            "boletas"
+          ]
+        },
+        "description": "Consultar mis boletas aprobadas"
+      }
+    },
+    {
+      "name": "Consultar detalle de mi boleta aprobada [GET /api/v1/nomina/mi/boletas/{boleta_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/mi/boletas/{{boleta_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "mi",
+            "boletas",
+            "{{boleta_id}}"
+          ]
+        },
+        "description": "Consultar detalle de mi boleta aprobada"
+      }
+    },
+    {
+      "name": "Consultar detalle de boleta [GET /api/v1/nomina/boletas/{boleta_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/nomina/boletas/{{boleta_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "nomina",
+            "boletas",
+            "{{boleta_id}}"
+          ]
+        },
+        "description": "Consultar detalle de boleta"
+      }
+    },
+    {
+      "name": "Registrar postulacion publica [POST /api/v1/publico/postulaciones]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/publico/postulaciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "publico",
+            "postulaciones"
+          ]
+        },
+        "description": "Recibe un formulario publico multipart con datos del postulante y CV. Crea o actualiza el postulante por empresa, crea la postulacion y devuelve un codigo de seguimiento."
+      }
+    },
+    {
+      "name": "Consultar postulacion publica [GET /api/v1/publico/postulaciones/{codigo}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/publico/postulaciones/{{codigo}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "publico",
+            "postulaciones",
+            "{{codigo}}"
+          ]
+        },
+        "description": "Consulta el estado de una postulacion publica mediante su codigo de seguimiento."
+      }
+    },
+    {
+      "name": "Consultar Entrevista [GET /api/v1/publico/postulaciones/{codigo}/entrevista]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/publico/postulaciones/{{codigo}}/entrevista",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "publico",
+            "postulaciones",
+            "{{codigo}}",
+            "entrevista"
+          ]
+        },
+        "description": "Consulta la próxima entrevista activa mediante el código de seguimiento."
+      }
+    },
+    {
+      "name": "Confirmar Entrevista [POST /api/v1/publico/postulaciones/{codigo}/entrevista/confirmar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/publico/postulaciones/{{codigo}}/entrevista/confirmar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "publico",
+            "postulaciones",
+            "{{codigo}}",
+            "entrevista",
+            "confirmar"
+          ]
+        },
+        "description": "Confirma la entrevista programada mediante el código de seguimiento."
+      }
+    },
+    {
+      "name": "Listar Postulantes [GET /api/v1/postulantes]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulantes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulantes"
+          ]
+        },
+        "description": "Lista postulantes de la empresa autorizada."
+      }
+    },
+    {
+      "name": "Registrar postulante manualmente [POST /api/v1/postulantes]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulantes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulantes"
+          ]
+        },
+        "description": "Da de alta un postulante en el banco de talento de la empresa autorizada. El CV es opcional porque el registro suele venir de una feria o un referido.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Obtener Postulante [GET /api/v1/postulantes/{postulante_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulantes/{{postulante_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulantes",
+            "{{postulante_id}}"
+          ]
+        },
+        "description": "Obtiene un postulante sin salir de su empresa."
+      }
+    },
+    {
+      "name": "Descargar CV del postulante [GET /api/v1/postulantes/{postulante_id}/cv]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulantes/{{postulante_id}}/cv",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulantes",
+            "{{postulante_id}}",
+            "cv"
+          ]
+        },
+        "description": "Descarga el archivo de hoja de vida almacenado para un postulante de la empresa autorizada."
+      }
+    },
+    {
+      "name": "Tablero [GET /api/v1/vacantes/{vacante_id}/tablero]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{vacante_id}}/tablero",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{vacante_id}}",
+            "tablero"
+          ]
+        },
+        "description": "Lista candidatos de una vacante dentro de la empresa autorizada."
+      }
+    },
+    {
+      "name": "Postulaciones [GET /api/v1/postulaciones]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones"
+          ]
+        },
+        "description": "Lista postulaciones de la empresa autorizada."
+      }
+    },
+    {
+      "name": "Etapas [GET /api/v1/etapas-reclutamiento]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/etapas-reclutamiento",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "etapas-reclutamiento"
+          ]
+        },
+        "description": "Lista las etapas de reclutamiento de la empresa."
+      }
+    },
+    {
+      "name": "Motivos [GET /api/v1/motivos-rechazo]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/motivos-rechazo",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "motivos-rechazo"
+          ]
+        },
+        "description": "Lista los motivos de rechazo de la empresa."
+      }
+    },
+    {
+      "name": "Cambiar Etapa [PATCH /api/v1/postulaciones/{postulacion_id}/etapa]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{postulacion_id}}/etapa",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{postulacion_id}}",
+            "etapa"
+          ]
+        },
+        "description": "Mueve una postulación a otra etapa de la empresa.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Rechazar [PATCH /api/v1/postulaciones/{postulacion_id}/rechazar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{postulacion_id}}/rechazar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{postulacion_id}}",
+            "rechazar"
+          ]
+        },
+        "description": "Rechaza una postulación con un motivo de la empresa.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Registrar puntaje de postulación [PATCH /api/v1/postulaciones/{postulacion_id}/puntaje]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{postulacion_id}}/puntaje",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{postulacion_id}}",
+            "puntaje"
+          ]
+        },
+        "description": "Registra el puntaje manual (0 a 100) de una postulación de la empresa autorizada.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Listar notas internas [GET /api/v1/postulaciones/{postulacion_id}/notas]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{postulacion_id}}/notas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{postulacion_id}}",
+            "notas"
+          ]
+        },
+        "description": "Lista las notas internas de una postulación de la empresa autorizada."
+      }
+    },
+    {
+      "name": "Agregar nota interna [POST /api/v1/postulaciones/{postulacion_id}/notas]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{postulacion_id}}/notas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{postulacion_id}}",
+            "notas"
+          ]
+        },
+        "description": "Agrega una nota interna a una postulación de la empresa autorizada.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Vacantes Para Seleccion [GET /api/v1/seleccion/vacantes]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/seleccion/vacantes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "seleccion",
+            "vacantes"
+          ]
+        },
+        "description": "Vacantes para seleccion dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Opciones [GET /api/v1/entrevistas/opciones]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/entrevistas/opciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "entrevistas",
+            "opciones"
+          ]
+        },
+        "description": "Opciones dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Agenda [GET /api/v1/entrevistas]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/entrevistas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "entrevistas"
+          ]
+        },
+        "description": "Agenda dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Crear Entrevista [POST /api/v1/entrevistas]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/entrevistas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "entrevistas"
+          ]
+        },
+        "description": "Crear entrevista dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Entrevista [GET /api/v1/entrevistas/{id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/entrevistas/{{id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "entrevistas",
+            "{{id}}"
+          ]
+        },
+        "description": "Entrevista dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Editar Entrevista [PATCH /api/v1/entrevistas/{id}]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/entrevistas/{{id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "entrevistas",
+            "{{id}}"
+          ]
+        },
+        "description": "Editar entrevista dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Estado Entrevista [PATCH /api/v1/entrevistas/{id}/estado]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/entrevistas/{{id}}/estado",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "entrevistas",
+            "{{id}}",
+            "estado"
+          ]
+        },
+        "description": "Estado entrevista dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Resultado [PATCH /api/v1/entrevistas/{id}/resultado]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/entrevistas/{{id}}/resultado",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "entrevistas",
+            "{{id}}",
+            "resultado"
+          ]
+        },
+        "description": "Resultado dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Entrevistas Postulacion [GET /api/v1/postulaciones/{id}/entrevistas]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{id}}/entrevistas",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{id}}",
+            "entrevistas"
+          ]
+        },
+        "description": "Entrevistas postulacion dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Evaluaciones [GET /api/v1/postulaciones/{id}/evaluaciones]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{id}}/evaluaciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{id}}",
+            "evaluaciones"
+          ]
+        },
+        "description": "Evaluaciones dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Crear Evaluacion [POST /api/v1/postulaciones/{id}/evaluaciones]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{id}}/evaluaciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{id}}",
+            "evaluaciones"
+          ]
+        },
+        "description": "Crear evaluacion dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Evaluadores [GET /api/v1/evaluaciones/opciones]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/evaluaciones/opciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "evaluaciones",
+            "opciones"
+          ]
+        },
+        "description": "Evaluadores dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Editar Evaluacion [PATCH /api/v1/evaluaciones/{id}]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/evaluaciones/{{id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "evaluaciones",
+            "{{id}}"
+          ]
+        },
+        "description": "Editar evaluacion dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Analisis [GET /api/v1/postulaciones/{id}/analisis-cv]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{id}}/analisis-cv",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{id}}",
+            "analisis-cv"
+          ]
+        },
+        "description": "Analisis dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Analizar [POST /api/v1/postulaciones/{id}/analisis-cv]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{id}}/analisis-cv",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{id}}",
+            "analisis-cv"
+          ]
+        },
+        "description": "Analizar dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Ranking [GET /api/v1/vacantes/{id}/ranking]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{id}}/ranking",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{id}}",
+            "ranking"
+          ]
+        },
+        "description": "Ranking dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Comparar [POST /api/v1/vacantes/{id}/comparar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{id}}/comparar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{id}}",
+            "comparar"
+          ]
+        },
+        "description": "Comparar dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Contratar [POST /api/v1/postulaciones/{id}/contratar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{id}}/contratar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{id}}",
+            "contratar"
+          ]
+        },
+        "description": "Contratar dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Empleados [GET /api/v1/empleados]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empleados",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empleados"
+          ]
+        },
+        "description": "Empleados dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Empleado [GET /api/v1/empleados/{id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/empleados/{{id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "empleados",
+            "{{id}}"
+          ]
+        },
+        "description": "Empleado dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Banco [PATCH /api/v1/postulantes/{id}/banco-talento]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulantes/{{id}}/banco-talento",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulantes",
+            "{{id}}",
+            "banco-talento"
+          ]
+        },
+        "description": "Banco dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Asociar [POST /api/v1/postulantes/{id}/postulaciones]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulantes/{{id}}/postulaciones",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulantes",
+            "{{id}}",
+            "postulaciones"
+          ]
+        },
+        "description": "Asociar dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Historial [GET /api/v1/postulaciones/{id}/historial]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/postulaciones/{{id}}/historial",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "postulaciones",
+            "{{id}}",
+            "historial"
+          ]
+        },
+        "description": "Historial dentro de la empresa autorizada. Requiere permiso específico; plataforma debe indicar empresa_id."
+      }
+    },
+    {
+      "name": "Listar roles [GET /api/v1/roles]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/roles",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "roles"
+          ]
+        },
+        "description": "Lista los roles disponibles en el alcance seleccionado. Permiso: `roles:gestionar` para empresa o `platform:usuarios:gestionar` para plataforma."
+      }
+    },
+    {
+      "name": "Crear rol [POST /api/v1/roles]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/roles",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "roles"
+          ]
+        },
+        "description": "Crea un rol dentro del alcance seleccionado. Los códigos de rol deben ser únicos en ese alcance.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar rol [GET /api/v1/roles/{role_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/roles/{{role_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "roles",
+            "{{role_id}}"
+          ]
+        },
+        "description": "Obtiene el rol y los permisos que tiene asignados dentro del alcance autorizado."
+      }
+    },
+    {
+      "name": "Actualizar rol [PATCH /api/v1/roles/{role_id}]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/roles/{{role_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "roles",
+            "{{role_id}}"
+          ]
+        },
+        "description": "Actualiza los campos enviados sin modificar los permisos que ya tiene asignados.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Eliminar rol [DELETE /api/v1/roles/{role_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/roles/{{role_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "roles",
+            "{{role_id}}"
+          ]
+        },
+        "description": "Elimina un rol del alcance autorizado cuando no está protegido por reglas del sistema."
+      }
+    },
+    {
+      "name": "Reemplazar permisos del rol [PUT /api/v1/roles/{role_id}/permissions]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/roles/{{role_id}}/permissions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "roles",
+            "{{role_id}}",
+            "permissions"
+          ]
+        },
+        "description": "Reemplaza el conjunto completo de permisos del rol. Los permisos deben existir y ser válidos para el alcance.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Catalogo [GET /api/v1/reportes/catalogo]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/reportes/catalogo",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reportes",
+            "catalogo"
+          ]
+        },
+        "description": "Lista las fuentes y columnas que pueden utilizarse sin aceptar SQL libre."
+      }
+    },
+    {
+      "name": "Interpretar [POST /api/v1/reportes/interpretar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/reportes/interpretar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reportes",
+            "interpretar"
+          ]
+        },
+        "description": "Interpreta texto; no envía filas ni el catálogo al proveedor de IA.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Listar [GET /api/v1/reportes]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/reportes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reportes"
+          ]
+        },
+        "description": "Lista las definiciones de reportes guardadas dentro de la empresa autorizada."
+      }
+    },
+    {
+      "name": "Crear [POST /api/v1/reportes]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/reportes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reportes"
+          ]
+        },
+        "description": "Guarda una definición validada para reutilizar columnas, filtros y orden.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Actualizar [PATCH /api/v1/reportes/{report_id}]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/reportes/{{report_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reportes",
+            "{{report_id}}"
+          ]
+        },
+        "description": "Modifica o desactiva una definición perteneciente al alcance autorizado.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Vista Previa [POST /api/v1/reportes/vista-previa]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/reportes/vista-previa",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reportes",
+            "vista-previa"
+          ]
+        },
+        "description": "Ejecuta una consulta limitada y devuelve una vista previa paginada.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Exportar [POST /api/v1/reportes/exportar/{formato}]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/reportes/exportar/{{formato}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reportes",
+            "exportar",
+            "{{formato}}"
+          ]
+        },
+        "description": "Genera y descarga el reporte en CSV, HTML, Excel o PDF y registra la ejecución.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Enviar [POST /api/v1/reportes/enviar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/reportes/enviar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "reportes",
+            "enviar"
+          ]
+        },
+        "description": "Genera el reporte y lo envía como adjunto mediante la configuración SMTP.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Listar respaldos [GET /api/v1/respaldos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos"
+          ]
+        },
+        "description": "Lista hasta cien respaldos del sistema, ordenados desde el más reciente."
+      }
+    },
+    {
+      "name": "Crear respaldo completo [POST /api/v1/respaldos]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos"
+          ]
+        },
+        "description": "Programa un volcado del esquema público y lo guarda en Storage privado.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Descargar respaldo [GET /api/v1/respaldos/{respaldo_id}/descargar]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos/{{respaldo_id}}/descargar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos",
+            "{{respaldo_id}}",
+            "descargar"
+          ]
+        },
+        "description": "Verifica el hash SHA-256 antes de entregar el archivo de respaldo."
+      }
+    },
+    {
+      "name": "Restaurar toda la base de datos [POST /api/v1/respaldos/{respaldo_id}/restaurar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos/{{respaldo_id}}/restaurar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos",
+            "{{respaldo_id}}",
+            "restaurar"
+          ]
+        },
+        "description": "Programa una restauración destructiva tras validar su habilitación y confirmación.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Eliminar respaldo [DELETE /api/v1/respaldos/{respaldo_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos/{{respaldo_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos",
+            "{{respaldo_id}}"
+          ]
+        },
+        "description": "Elimina el archivo privado y su registro, salvo que exista una operación en curso."
+      }
+    },
+    {
+      "name": "Get Tenant Backup Config [GET /api/v1/respaldos-empresa/configuracion/{empresa_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos-empresa/configuracion/{{empresa_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos-empresa",
+            "configuracion",
+            "{{empresa_id}}"
+          ]
+        },
+        "description": "Consulta si la copia diaria está habilitada para la empresa indicada."
+      }
+    },
+    {
+      "name": "Update Tenant Backup Config [PATCH /api/v1/respaldos-empresa/configuracion/{empresa_id}]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos-empresa/configuracion/{{empresa_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos-empresa",
+            "configuracion",
+            "{{empresa_id}}"
+          ]
+        },
+        "description": "Plataforma configura la copia diaria; la empresa puede elegir su hora si el plan lo permite.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Listar respaldos por empresa [GET /api/v1/respaldos-empresa]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos-empresa",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos-empresa"
+          ]
+        },
+        "description": "Lista el historial paginado del alcance autorizado; plataforma puede ver todas."
+      }
+    },
+    {
+      "name": "Create Tenant Backup [POST /api/v1/respaldos-empresa]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos-empresa",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos-empresa"
+          ]
+        },
+        "description": "Solicita una copia manual; el backend con el volumen de CV la procesa.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Último respaldo de empresa [GET /api/v1/respaldos-empresa/ultimo]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos-empresa/ultimo",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos-empresa",
+            "ultimo"
+          ]
+        },
+        "description": "Devuelve el último intento y la última copia válida de una empresa."
+      }
+    },
+    {
+      "name": "Get Tenant Backup [GET /api/v1/respaldos-empresa/{backup_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos-empresa/{{backup_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos-empresa",
+            "{{backup_id}}"
+          ]
+        },
+        "description": "Consulta el estado de una copia sin revelar copias de otras empresas."
+      }
+    },
+    {
+      "name": "Descargar respaldo de empresa [GET /api/v1/respaldos-empresa/{backup_id}/descargar]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos-empresa/{{backup_id}}/descargar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos-empresa",
+            "{{backup_id}}",
+            "descargar"
+          ]
+        },
+        "description": "Descarga una copia completa tras comprobar su integridad SHA-256."
+      }
+    },
+    {
+      "name": "Previsualizar restauración de empresa [GET /api/v1/respaldos-empresa/{backup_id}/restauracion/preview]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos-empresa/{{backup_id}}/restauracion/preview",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos-empresa",
+            "{{backup_id}}",
+            "restauracion",
+            "preview"
+          ]
+        },
+        "description": "Previsualizar restauración de empresa"
+      }
+    },
+    {
+      "name": "Restaurar una empresa desde su copia [POST /api/v1/respaldos-empresa/{backup_id}/restaurar]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/respaldos-empresa/{{backup_id}}/restaurar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "respaldos-empresa",
+            "{{backup_id}}",
+            "restaurar"
+          ]
+        },
+        "description": "Restaurar una empresa desde su copia",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Catálogo de permisos asignables [GET /api/v1/permisos]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/permisos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "permisos"
+          ]
+        },
+        "description": "Permisos que el alcance actual puede asignar a un rol. Un administrador de empresa nunca ve los permisos `platform:*` ni los de módulos que su empresa no tiene habilitados."
+      }
+    },
+    {
+      "name": "Listar usuarios [GET /api/v1/usuarios]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios"
+          ]
+        },
+        "description": "Lista usuarios con búsqueda, estado y paginación. Permisos: `usuarios:ver` para empresa o `platform:usuarios:gestionar` para plataforma."
+      }
+    },
+    {
+      "name": "Crear usuario [POST /api/v1/usuarios]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios"
+          ]
+        },
+        "description": "Crea una cuenta y asigna sus roles. Un administrador empresarial crea usuarios solo en su empresa; plataforma puede crear usuarios globales o indicar `empresa_id`. Permisos: `usuarios:crear` o `platform:usuarios:gestionar`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar mi perfil [GET /api/v1/usuarios/me]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "me"
+          ]
+        },
+        "description": "Devuelve la información completa del usuario autenticado dentro de su alcance. Complementa a `/auth/me` (identidad) con los datos editables del perfil."
+      }
+    },
+    {
+      "name": "Actualizar mi perfil [PATCH /api/v1/usuarios/me]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "me"
+          ]
+        },
+        "description": "Actualiza solo la información básica del usuario autenticado (nombre, apellido, teléfono). No permite cambiar correo, usuario, roles ni estado: son privilegios administrativos. La operación queda registrada en bitácora.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Actualizar usuario [PATCH /api/v1/usuarios/{usuario_id}]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/{{usuario_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{usuario_id}}"
+          ]
+        },
+        "description": "Actualiza únicamente los campos enviados y, cuando corresponda, reemplaza sus roles. Permisos: `usuarios:editar` o `platform:usuarios:gestionar`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Eliminar usuario [DELETE /api/v1/usuarios/{usuario_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/{{usuario_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{usuario_id}}"
+          ]
+        },
+        "description": "Elimina lógicamente la cuenta, desactiva su acceso y revoca sus sesiones sin borrar roles ni bitácora. No permite autoeliminación ni eliminar al último administrador activo. Permisos: `usuarios:eliminar` o `platform:usuarios:gestionar`."
+      }
+    },
+    {
+      "name": "Consultar usuario [GET /api/v1/usuarios/{usuario_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/{{usuario_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{usuario_id}}"
+          ]
+        },
+        "description": "Obtiene una cuenta por identificador dentro del alcance autorizado. Permisos: `usuarios:ver` o `platform:usuarios:gestionar`."
+      }
+    },
+    {
+      "name": "Consultar ficha vinculada a un usuario [GET /api/v1/usuarios/{usuario_id}/ficha-empleado]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/{{usuario_id}}/ficha-empleado",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{usuario_id}}",
+            "ficha-empleado"
+          ]
+        },
+        "description": "Consultar ficha vinculada a un usuario"
+      }
+    },
+    {
+      "name": "Activar usuario [PATCH /api/v1/usuarios/{usuario_id}/activar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/{{usuario_id}}/activar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{usuario_id}}",
+            "activar"
+          ]
+        },
+        "description": "Habilita el acceso de una cuenta dentro del alcance autorizado. Permisos: `usuarios:editar` o `platform:usuarios:gestionar`."
+      }
+    },
+    {
+      "name": "Desactivar usuario [PATCH /api/v1/usuarios/{usuario_id}/desactivar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/{{usuario_id}}/desactivar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{usuario_id}}",
+            "desactivar"
+          ]
+        },
+        "description": "Deshabilita el acceso sin eliminar la cuenta. No permite desactivar al último administrador del alcance. Permisos: `usuarios:editar` o `platform:usuarios:gestionar`."
+      }
+    },
+    {
+      "name": "Restaurar usuario [PATCH /api/v1/usuarios/{usuario_id}/restaurar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/{{usuario_id}}/restaurar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{usuario_id}}",
+            "restaurar"
+          ]
+        },
+        "description": "Recupera una cuenta eliminada y la mantiene inactiva. Después debe usarse `/activar` para habilitar su acceso. Permisos: `usuarios:restaurar` o `platform:usuarios:gestionar`."
+      }
+    },
+    {
+      "name": "Asignar contraseña administrativa [PUT /api/v1/usuarios/{usuario_id}/password]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/{{usuario_id}}/password",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{usuario_id}}",
+            "password"
+          ]
+        },
+        "description": "Establece una contraseña nueva, permite exigir cambio en el siguiente acceso y revoca sesiones existentes. Permisos: `usuarios:cambiar_password` o `platform:usuarios:gestionar`.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Desbloquear usuario [PATCH /api/v1/usuarios/{usuario_id}/desbloquear]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/usuarios/{{usuario_id}}/desbloquear",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "usuarios",
+            "{{usuario_id}}",
+            "desbloquear"
+          ]
+        },
+        "description": "Restablece los intentos fallidos y elimina el bloqueo temporal. Permisos: `usuarios:desbloquear` o `platform:usuarios:gestionar`."
+      }
+    },
+    {
+      "name": "Listar planes [GET /api/v1/planes]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/planes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "planes"
+          ]
+        },
+        "description": "Lista los planes SaaS activos; plataforma puede incluir inactivos."
+      }
+    },
+    {
+      "name": "Crear plan [POST /api/v1/planes]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/planes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "planes"
+          ]
+        },
+        "description": "Crea un plan global con límites y módulos contratables.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Actualizar plan [PUT /api/v1/planes/{plan_id}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/planes/{{plan_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "planes",
+            "{{plan_id}}"
+          ]
+        },
+        "description": "Actualiza precio, límites, módulos y Price ID de Sandbox.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Consultar mi suscripción [GET /api/v1/suscripcion]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/suscripcion",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "suscripcion"
+          ]
+        },
+        "description": "Devuelve plan, vigencia y estado del tenant autenticado."
+      }
+    },
+    {
+      "name": "Consultar consumo [GET /api/v1/suscripcion/consumo]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/suscripcion/consumo",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "suscripcion",
+            "consumo"
+          ]
+        },
+        "description": "Calcula usuarios, vacantes activas y almacenamiento del tenant."
+      }
+    },
+    {
+      "name": "Ajustar suscripción [PUT /api/v1/suscripcion/empresas/{empresa_id}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/suscripcion/empresas/{{empresa_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "suscripcion",
+            "empresas",
+            "{{empresa_id}}"
+          ]
+        },
+        "description": "Permite a plataforma asignar un plan o estado manualmente.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Crear Checkout [POST /api/v1/suscripcion/checkout]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/suscripcion/checkout",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "suscripcion",
+            "checkout"
+          ]
+        },
+        "description": "Crea una sesión Stripe Checkout en modo suscripción para el tenant.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Abrir portal de pagos [POST /api/v1/suscripcion/portal]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/suscripcion/portal",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "suscripcion",
+            "portal"
+          ]
+        },
+        "description": "Crea una sesión temporal de Stripe Customer Portal."
+      }
+    },
+    {
+      "name": "Recibir webhook Stripe [POST /api/v1/webhooks/stripe]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/webhooks/stripe",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "webhooks",
+            "stripe"
+          ]
+        },
+        "description": "Verifica la firma y procesa eventos de suscripción de forma idempotente."
+      }
+    },
+    {
+      "name": "Listar vacantes [GET /api/v1/vacantes]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes"
+          ]
+        },
+        "description": "Lista las vacantes del alcance autorizado."
+      }
+    },
+    {
+      "name": "Crear vacante [POST /api/v1/vacantes]",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes"
+          ]
+        },
+        "description": "Crea una vacante en la empresa autorizada.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Obtener vacante [GET /api/v1/vacantes/{vacante_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{vacante_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{vacante_id}}"
+          ]
+        },
+        "description": "Obtiene una vacante de la empresa autorizada."
+      }
+    },
+    {
+      "name": "Actualizar vacante [PUT /api/v1/vacantes/{vacante_id}]",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{vacante_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{vacante_id}}"
+          ]
+        },
+        "description": "Actualiza una vacante que todavía está en borrador.",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Eliminar vacante [DELETE /api/v1/vacantes/{vacante_id}]",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{vacante_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{vacante_id}}"
+          ]
+        },
+        "description": "Elimina una vacante que todavía no tiene publicaciones activas."
+      }
+    },
+    {
+      "name": "Publicar vacante [PATCH /api/v1/vacantes/{vacante_id}/publicar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{vacante_id}}/publicar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{vacante_id}}",
+            "publicar"
+          ]
+        },
+        "description": "Publica una vacante en el portal público."
+      }
+    },
+    {
+      "name": "Reanudar vacante [PATCH /api/v1/vacantes/{vacante_id}/reanudar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{vacante_id}}/reanudar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{vacante_id}}",
+            "reanudar"
+          ]
+        },
+        "description": "Reanuda una vacante pausada (PAUSADA -> PUBLICADA)."
+      }
+    },
+    {
+      "name": "Pausar vacante [PATCH /api/v1/vacantes/{vacante_id}/pausar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{vacante_id}}/pausar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{vacante_id}}",
+            "pausar"
+          ]
+        },
+        "description": "Retira temporalmente del portal público una vacante publicada (PUBLICADA -> PAUSADA). Devuelve 409 si la vacante está en otro estado."
+      }
+    },
+    {
+      "name": "Cerrar vacante [PATCH /api/v1/vacantes/{vacante_id}/cerrar]",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/vacantes/{{vacante_id}}/cerrar",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "vacantes",
+            "{{vacante_id}}",
+            "cerrar"
+          ]
+        },
+        "description": "Cierra el proceso de una vacante publicada o pausada (PUBLICADA|PAUSADA -> CERRADA). Devuelve 409 si la vacante está en otro estado."
+      }
+    },
+    {
+      "name": "Consultar información pública de empresa [GET /api/v1/publico/{empresa_slug}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/publico/{{empresa_slug}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "publico",
+            "{{empresa_slug}}"
+          ]
+        },
+        "description": "Devuelve el perfil público de una empresa para su portal de empleo."
+      }
+    },
+    {
+      "name": "Listar vacantes públicas [GET /api/v1/publico/{empresa_slug}/vacantes]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/publico/{{empresa_slug}}/vacantes",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "publico",
+            "{{empresa_slug}}",
+            "vacantes"
+          ]
+        },
+        "description": "Lista vacantes publicadas y vigentes de una empresa."
+      }
+    },
+    {
+      "name": "Consultar vacante pública [GET /api/v1/publico/{empresa_slug}/vacantes/{vacante_id}]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/v1/publico/{{empresa_slug}}/vacantes/{{vacante_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "publico",
+            "{{empresa_slug}}",
+            "vacantes",
+            "{{vacante_id}}"
+          ]
+        },
+        "description": "Obtiene el detalle público de una vacante vigente."
+      }
+    },
+    {
+      "name": "Verificar estado del servicio [GET /health]",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "description": "Endpoint público usado para verificar que la API está levantada."
+      }
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import base64
 import hashlib
 import io
 import json
+import os
 import shutil
 import tarfile
 from datetime import UTC, date, datetime
@@ -35,6 +36,7 @@ DIRECT_TABLES = (
     "autorizacion_horas_extra", "estructura_salarial", "regla_salarial",
     "periodo_nomina", "boleta_pago", "boleta_detalle",
     "impuesto_empleado", "haber_proporcional",
+    "curso", "leccion", "inscripcion", "progreso_leccion", "empleado_habilidad",
 )
 CHILD_TABLES = (
     ("usuario_rol", "usuario_id", "usuario"),
@@ -221,6 +223,22 @@ def _write_package(
                 "documento_id": str(document["id"]), "path": arcname,
                 "sha256": checksum, "size": copy.stat().st_size,
             })
+            staged.append((copy, arcname))
+        material_root = Path(os.getenv("CAPACITACION_FILES_DIRECTORY", "uploads/capacitacion")).resolve() / empresa_id
+        material_names = {Path(row["contenido_url"]).name for row in rows.get("leccion", []) if (row.get("contenido_url") or "").startswith("/api/v1/capacitacion/materiales/")}
+        for name in sorted(material_names):
+            source = (material_root / name).resolve()
+            if not source.is_relative_to(material_root) or not source.is_file():
+                raise TenantBackupError("Un material de capacitación no está disponible")
+            arcname = f"files/capacitacion/{name}"
+            copy = Path(temporary) / f"material-{name}"
+            before = _file_hash(source)
+            with source.open("rb") as original, copy.open("wb") as staged_file:
+                shutil.copyfileobj(original, staged_file, length=1024 * 1024)
+            checksum = _file_hash(copy)
+            if before != _file_hash(source) or before != checksum:
+                raise TenantBackupError("Un material cambió mientras se generaba el respaldo")
+            manifest["files"].append({"material_name": name, "path": arcname, "sha256": checksum, "size": copy.stat().st_size})
             staged.append((copy, arcname))
         with tarfile.open(path, "w:gz") as archive:
             _add_bytes(archive, "data.json", content)

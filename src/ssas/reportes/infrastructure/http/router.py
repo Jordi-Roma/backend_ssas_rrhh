@@ -1,8 +1,9 @@
+import csv
 import smtplib
 from datetime import UTC, datetime
 from email.message import EmailMessage
 from html import escape
-from io import BytesIO
+from io import BytesIO, StringIO
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from openpyxl import Workbook
@@ -234,6 +235,14 @@ async def vista_previa(body: ReporteConfig, empresa_id: str | None = None, page:
 
 
 def _document(config: ReporteConfig, rows: list[dict], formato: str) -> tuple[bytes, str]:
+    if formato == "csv":
+        output = StringIO(newline="")
+        writer = csv.writer(output)
+        writer.writerow(config.columnas)
+        for row in rows:
+            # Evita que una hoja de cálculo ejecute fórmulas al abrir el CSV.
+            writer.writerow(["'" + str(row.get(c, "")) if str(row.get(c, "")).startswith(("=", "+", "-", "@", "\t", "\r")) else row.get(c, "") for c in config.columnas])
+        return ("\ufeff" + output.getvalue()).encode("utf-8"), "text/csv; charset=utf-8"
     if formato == "html":
         head = "".join(f"<th>{escape(c)}</th>" for c in config.columnas)
         body = "".join("<tr>" + "".join(f"<td>{escape(str(row.get(c, '')))}</td>" for c in config.columnas) + "</tr>" for row in rows)
@@ -256,7 +265,7 @@ def _document(config: ReporteConfig, rows: list[dict], formato: str) -> tuple[by
 
 @router.post("/exportar/{formato}")
 async def exportar(formato: str, body: ReporteConfig, request: Request, empresa_id: str | None = None, user: CurrentUser = Depends(require_scoped_permission("reportes:exportar", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
-    """Genera y descarga el reporte en HTML, Excel o PDF y registra la ejecución."""
+    """Genera y descarga el reporte en CSV, HTML, Excel o PDF y registra la ejecución."""
     target = _empresa(user, empresa_id)
     await require_plan_feature(session, target, "reportes_avanzados")
     rows = await _rows(session, target, body)

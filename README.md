@@ -9,6 +9,8 @@ API REST multiempresa para la gestión de recursos humanos. Está construida con
 - Planes, suscripciones y pagos mediante Stripe.
 - Personal: legajo, contratos, documentos, asistencia, ausencias y solicitudes.
 - Nómina: periodos, cálculo, aprobaciones, parámetros legales y boletas. **Antes de usarla para pagos reales, el responsable debe validar las reglas y los datos**; ver [Sprint 3 backend](docs/sprint3_backend.md).
+- Capacitación: cursos, lecciones, materiales, inscripciones, avance, evaluaciones y certificados por empresa.
+- Indicadores: rotación, ausentismo, contratación, dotación por departamento y embudo de reclutamiento; reportes exportables en CSV.
 - Reportes, ayuda y chatbot, con funciones de IA sujetas a su configuración.
 - Respaldos globales y respaldos aislados por empresa; ver [guía de respaldos](docs/tenant_backups.md). La restauración individual por empresa no está implementada.
 
@@ -63,6 +65,9 @@ Para pruebas de integración, configurar una base separada antes de ejecutar pru
 
 - [Índice de documentación](docs/README.md). Algunos documentos históricos describen el estado de su fecha y no sustituyen el OpenAPI actual.
 - [Implementación y límites del Sprint 3](docs/sprint3_backend.md).
+- [Contrato y operación del Sprint 4](docs/guias/SPRINT4_BACKEND.md).
+- [OpenAPI del Sprint 4](docs/openapi_sprint4.json) y [colección Postman](docs/postman/sprint4_backend.postman_collection.json).
+- [Verificación local de restauración](docs/evidencias/sprint4_restore_local.md).
 - [Respaldos por empresa](docs/tenant_backups.md).
 - [Funciones por plan](docs/funciones_por_plan.md).
 - [Contrato OpenAPI y versionado](docs/arquitectura/CONTRATO_OPENAPI_Y_VERSIONADO.md).

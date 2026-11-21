@@ -133,7 +133,7 @@ def read_tenant_package(path: Path, empresa_id: str, schema_revision: str) -> Va
                 raise TenantBackupError("Manifiesto de archivos inválido")
             for entry in listed:
                 member_name = entry["path"]
-                if member_name in files or not member_name.startswith(("files/cv/", "files/employee-documents/")):
+                if member_name in files or not member_name.startswith(("files/cv/", "files/employee-documents/", "files/capacitacion/")):
                     raise TenantBackupError("Archivo duplicado o fuera del paquete")
                 content = archive.extractfile(member_name).read()
                 if len(content) != entry["size"] or hashlib.sha256(content).hexdigest() != entry["sha256"]:
@@ -168,9 +168,12 @@ def file_targets(package: ValidatedPackage, empresa_id: str) -> dict[Path, bytes
     document_root = (Path(settings.employee_files_directory).resolve() / empresa_id)
     postulantes = {row["cv_url"] for row in package.rows["postulante"] if row.get("cv_url")}
     documents = {str(row["id"]): row for row in package.rows["documento_empleado"]}
+    material_names = {Path(row["contenido_url"]).name for row in package.rows.get("leccion", []) if (row.get("contenido_url") or "").startswith("/api/v1/capacitacion/materiales/")}
+    material_root = Path(os.getenv("CAPACITACION_FILES_DIRECTORY", "uploads/capacitacion")).resolve() / empresa_id
     targets: dict[Path, bytes] = {}
     seen_cv: set[str] = set()
     seen_documents: set[str] = set()
+    seen_materials: set[str] = set()
     for entry in package.manifest["files"]:
         content = package.files[entry["path"]]
         if "cv_url" in entry:
@@ -190,12 +193,20 @@ def file_targets(package: ValidatedPackage, empresa_id: str) -> dict[Path, bytes
             target = Path(documents[doc_id]["ruta_privada"]).resolve()
             if not target.is_relative_to(document_root):
                 raise TenantBackupError("Ruta de documento fuera de la empresa")
+        elif "material_name" in entry:
+            name = entry["material_name"]
+            if name not in material_names or name in seen_materials or Path(name).name != name:
+                raise TenantBackupError("Material sin referencia única en la empresa")
+            seen_materials.add(name)
+            target = (material_root / name).resolve()
+            if not target.is_relative_to(material_root):
+                raise TenantBackupError("Ruta de material fuera de la empresa")
         else:
             raise TenantBackupError("Archivo sin referencia")
         if target in targets:
             raise TenantBackupError("Dos archivos usan la misma ruta")
         targets[target] = content
-    if seen_cv != postulantes or seen_documents != set(documents):
+    if seen_cv != postulantes or seen_documents != set(documents) or seen_materials != material_names:
         raise TenantBackupError("Faltan archivos de la empresa en el paquete")
     return targets
 

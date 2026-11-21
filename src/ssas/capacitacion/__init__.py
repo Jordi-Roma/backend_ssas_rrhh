@@ -1,0 +1,1 @@
+"""Capacitación por empresa."""

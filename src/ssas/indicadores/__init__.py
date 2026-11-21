@@ -1,0 +1,1 @@
+"""Indicadores de recursos humanos."""
