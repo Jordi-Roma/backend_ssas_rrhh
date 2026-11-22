@@ -85,3 +85,8 @@ Para pruebas de integración, configurar una base separada antes de ejecutar pru
 ## Licencia
 
 MIT. Ver [LICENSE](LICENSE).
+# Finanzas de suscripciones
+
+Administración global: `GET /api/v1/reportes/finanzas?desde=AAAA-MM-DD&hasta=AAAA-MM-DD&moneda=USD` resume los pagos confirmados por `invoice.paid`, los reembolsos `charge.refunded` y los costos registrados. `POST /api/v1/reportes/finanzas/gastos` registra un gasto con fecha, categoría, monto, moneda y referencia única del comprobante. `GET /api/v1/reportes/finanzas/analisis` genera una lectura con Gemini de los agregados, sin enviar datos personales.
+
+El dashboard web está en **Análisis → Finanzas de suscripciones**. Requiere `platform:reportes:gestionar` y la migración `20261121_0017`. Configure el webhook Stripe para enviar también `charge.refunded`. Solo se contabilizan pagos posteriores al despliegue de esta migración; la historia anterior requiere conciliación separada. Los eventos de prueba de Stripe se excluyen del reporte. Los costos de almacenamiento, backup, modelos de IA, aprendizaje automático, soporte, infraestructura y comisiones se cargan con sus comprobantes; todavía no hay importación automática de facturas de proveedores. Por ello se muestra **saldo parcial**, nunca utilidad auditada ni saldo bancario. No se mezclan monedas ni se hace conversión de divisas.

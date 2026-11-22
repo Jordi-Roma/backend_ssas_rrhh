@@ -36,6 +36,7 @@ from ssas.postulaciones.infrastructure.http.seleccion_router import router as se
 from ssas.postulaciones.infrastructure.http.tablero_router import router as tablero_router
 from ssas.postulantes.infrastructure.http.router import router as postulantes_router
 from ssas.reportes.infrastructure.http.router import router as reportes_router
+from ssas.reportes.infrastructure.http.finanzas_router import router as finanzas_router
 from ssas.respaldos.infrastructure.http.router import router as respaldos_router
 from ssas.respaldos.infrastructure.http.tenant_router import router as respaldos_empresa_router
 from ssas.roles.infrastructure.http.router import (
@@ -82,6 +83,7 @@ api_router.include_router(tablero_router)
 api_router.include_router(seleccion_router)
 api_router.include_router(roles_router)
 api_router.include_router(reportes_router)
+api_router.include_router(finanzas_router)
 api_router.include_router(respaldos_router)
 api_router.include_router(respaldos_empresa_router)
 api_router.include_router(permisos_router)

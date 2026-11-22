@@ -1,5 +1,6 @@
 import asyncio
 from datetime import UTC, datetime
+from decimal import Decimal
 
 import stripe
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
@@ -26,6 +27,7 @@ from ssas.empresas.infrastructure.persistence.models.suscripcion import (
 from ssas.infrastructure.database.session import get_session
 from ssas.modulos.infrastructure.persistence.models.empresa_modulo import EmpresaModuloModel
 from ssas.modulos.infrastructure.persistence.models.modulo import ModuloModel
+from ssas.reportes.infrastructure.persistence.models.finanzas import MovimientoFinancieroModel
 from ssas.suscripciones.application.invoice_email import InvoiceEmailError, send_paid_invoice
 from ssas.suscripciones.application.policy import SubscriptionPolicy, SubscriptionPolicyError
 from ssas.suscripciones.infrastructure.http.schemas import (
@@ -235,12 +237,38 @@ async def stripe_webhook(request: Request, stripe_signature: str = Header(alias=
                 if event_type == "invoice.paid":
                     if item is None:
                         raise ValueError("Cliente Stripe sin empresa asociada")
+                    paid = int(obj.get("amount_paid") or 0)
+                    if paid > 0:
+                        plan = await session.get(PlanSuscripcionModel, item.plan_id)
+                        await session.execute(insert(MovimientoFinancieroModel).values(
+                            empresa_id=item.empresa_id, tipo="INGRESO",
+                            categoria=plan.nombre if plan else "PLAN", monto=Decimal(paid) / 100,
+                            moneda=str(obj.get("currency") or "usd").upper(),
+                            fecha=datetime.fromtimestamp(obj.get("status_transitions", {}).get("paid_at") or obj.get("created") or event["created"], UTC).date(),
+                            fuente="STRIPE", referencia=f"stripe:invoice:{obj['id']}",
+                            descripcion="Factura de suscripción pagada",
+                            entorno_prueba=not bool(event.get("livemode", False)),
+                        ).on_conflict_do_nothing(index_elements=[MovimientoFinancieroModel.referencia]))
                     company = await session.get(EmpresaModel, item.empresa_id)
                     recipient = obj.get("customer_email") or (company.email if company else None) or settings.smtp_only_email
                     if not recipient:
                         raise InvoiceEmailError("La empresa no tiene correo de facturación")
                     invoice_mail = (obj, recipient)
-            if item:
+            elif event_type == "charge.refunded":
+                item = (await session.execute(select(SuscripcionModel).where(SuscripcionModel.stripe_customer_id == obj.get("customer")))).scalar_one_or_none()
+                if item:
+                    for refund in obj.get("refunds", {}).get("data", []):
+                        refunded = int(refund.get("amount") or 0)
+                        if refunded <= 0 or refund.get("status") != "succeeded":
+                            continue
+                        await session.execute(insert(MovimientoFinancieroModel).values(
+                            empresa_id=item.empresa_id, tipo="REEMBOLSO", categoria="STRIPE",
+                            monto=Decimal(refunded) / 100, moneda=str(refund.get("currency") or obj.get("currency") or "usd").upper(),
+                            fecha=datetime.fromtimestamp(refund.get("created") or event["created"], UTC).date(), fuente="STRIPE",
+                            referencia=f"stripe:refund:{refund['id']}", descripcion="Reembolso de suscripción",
+                            entorno_prueba=not bool(event.get("livemode", False)),
+                        ).on_conflict_do_nothing(index_elements=[MovimientoFinancieroModel.referencia]))
+            if item and event_type != "charge.refunded":
                 await _sync_modules(session, item.empresa_id, item.plan_id)
                 await _audit(session, None, "SUBSCRIPTION_UPDATED", f"Stripe procesó {event_type}", item.id, item.empresa_id, {"estado": item.estado})
         if invoice_mail:

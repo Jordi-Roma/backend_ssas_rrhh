@@ -50,6 +50,7 @@ CHILD_TABLES = (
     ("analisis_cv", "postulacion_id", "postulacion"),
 )
 PLATFORM_TABLES = {
+    "movimiento_financiero",
     "empresa_modulo", "suscripcion", "respaldo_empresa", "respaldo_empresa_config", "refresh_token",
     "password_reset_token", "email_verification_token",
     "notificacion_dispositivo",

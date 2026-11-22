@@ -35,6 +35,7 @@ def import_all_models() -> None:
     import ssas.postulantes.infrastructure.persistence.models.postulante
     import ssas.postulantes.infrastructure.persistence.models.postulante_habilidad
     import ssas.reportes.infrastructure.persistence.models.reporte
+    import ssas.reportes.infrastructure.persistence.models.finanzas
     import ssas.respaldos.infrastructure.persistence.models.respaldo
     import ssas.respaldos.infrastructure.persistence.models.respaldo_empresa
     import ssas.respaldos.infrastructure.persistence.models.respaldo_empresa_config

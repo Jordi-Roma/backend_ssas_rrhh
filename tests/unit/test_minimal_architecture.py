@@ -42,6 +42,7 @@ def test_schema_contains_only_current_scope_tables() -> None:
         "suscripcion",
         "reporte_definicion",
         "reporte_ejecucion",
+        "movimiento_financiero",
         "respaldo",
         "plan_modulo",
         "stripe_evento",
