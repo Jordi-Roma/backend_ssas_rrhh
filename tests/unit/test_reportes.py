@@ -6,6 +6,11 @@ import pytest
 from fastapi import HTTPException
 
 from ssas.auth.infrastructure.persistence.models.user import UserModel
+from ssas.capacitacion.models import CursoModel, InscripcionModel
+from ssas.cargos.infrastructure.persistence.models.cargo import CargoModel
+from ssas.departamentos.infrastructure.persistence.models.departamento import DepartamentoModel
+from ssas.empleados.infrastructure.persistence.models.empleado import EmpleadoModel
+from ssas.personal.infrastructure.persistence.models import BoletaDetalleModel, BoletaPagoModel, ContratoModel, PeriodoNominaModel, SolicitudAusenciaModel
 from ssas.postulaciones.infrastructure.persistence.models.postulacion import PostulacionModel
 from ssas.postulantes.infrastructure.persistence.models.postulante import PostulanteModel
 from ssas.reportes.infrastructure.http.router import (
@@ -16,6 +21,8 @@ from ssas.reportes.infrastructure.http.router import (
     _rows,
     _validate,
     grafico,
+    _authorize_source,
+    catalogo,
 )
 
 
@@ -23,6 +30,37 @@ def test_absence_report_labels_missing_historical_department() -> None:
     assert "Sin departamento en esa fecha" in SOURCES["ausencias"]["departamento"]
     assert "c.fecha_fin>=sa.fecha_inicio" in FROM_SQL["ausencias"]
     assert TENANT_COLUMN["ausencias"] == "sa.empresa_id"
+
+
+@pytest.mark.asyncio
+async def test_payroll_report_requires_payroll_read_permission() -> None:
+    from ssas.roles.domain.exceptions import PermissionDeniedError
+
+    user = SimpleNamespace(id="reader", empresa_id="company-a", es_plataforma=False)
+    with patch("ssas.reportes.infrastructure.http.router.CheckPermission") as checker:
+        checker.return_value.execute = AsyncMock(side_effect=PermissionDeniedError("denied"))
+        with pytest.raises(HTTPException) as error:
+            await _authorize_source(MagicMock(), user, "boletas")
+        assert error.value.status_code == 403
+        assert checker.return_value.execute.call_args.kwargs["required_permission"] == "boletas:ver"
+
+
+def test_new_report_sources_are_tenant_scoped() -> None:
+    for source in ("empleados", "contratos", "boletas", "capacitaciones"):
+        assert source in SOURCES and source in FROM_SQL and source in TENANT_COLUMN
+        assert TENANT_COLUMN[source].endswith("empresa_id")
+
+
+@pytest.mark.asyncio
+async def test_catalog_hides_sources_without_extra_permission() -> None:
+    async def authorize(_, __, source):
+        if source == "boletas":
+            raise HTTPException(403, "denied")
+    with patch("ssas.reportes.infrastructure.http.router._authorize_source", side_effect=authorize):
+        sources = await catalogo(SimpleNamespace(), MagicMock())
+    codes = {source["codigo"] for source in sources}
+    assert "boletas" not in codes
+    assert "vacantes" in codes
 from ssas.reportes.infrastructure.http.schemas import GraficoConfig, ReporteConfig
 from ssas.vacantes.infrastructure.persistence.models.vacante import VacanteModel
 
@@ -80,11 +118,21 @@ def test_all_report_columns_exist_in_the_database_models() -> None:
         "u": set(UserModel.__table__.columns.keys()),
         "po": set(PostulacionModel.__table__.columns.keys()),
         "p": set(PostulanteModel.__table__.columns.keys()),
+        "e": set(EmpleadoModel.__table__.columns.keys()),
+        "c": set(ContratoModel.__table__.columns.keys()),
+        "ca": set(CargoModel.__table__.columns.keys()),
+        "d": set(DepartamentoModel.__table__.columns.keys()),
+        "sa": set(SolicitudAusenciaModel.__table__.columns.keys()),
+        "b": set(BoletaPagoModel.__table__.columns.keys()),
+        "bd": set(BoletaDetalleModel.__table__.columns.keys()),
+        "pn": set(PeriodoNominaModel.__table__.columns.keys()),
+        "cu": set(CursoModel.__table__.columns.keys()),
+        "i": set(InscripcionModel.__table__.columns.keys()),
     }
     for source, columns in SOURCES.items():
         expressions = [*columns.values(), FROM_SQL[source], TENANT_COLUMN[source]]
         for expression in expressions:
-            for alias, column in re.findall(r"\b(v|u|po|p)\.([a-z_]+)\b", expression):
+            for alias, column in re.findall(r"\b(" + "|".join(sorted(aliases, key=len, reverse=True)) + r")\.([a-z_]+)\b", expression):
                 assert column in aliases[alias], f"{source}: {alias}.{column} no existe"
 
 

@@ -22,6 +22,9 @@ from ssas.core.api.openapi import TAG_REPORTES
 from ssas.core.api.request_metadata import get_client_ip
 from ssas.core.security.dependencies import CurrentUser, require_scoped_permission
 from ssas.infrastructure.database.session import get_session
+from ssas.roles.application.use_cases.check_permission import CheckPermission
+from ssas.roles.domain.exceptions import PermissionDeniedError
+from ssas.roles.infrastructure.persistence.repositories.authorization_repository import SqlAlchemyAuthorizationRepository
 from ssas.reportes.infrastructure.http.ai_provider import (
     GeminiReportInterpreter,
     ReportInterpretationError,
@@ -68,6 +71,32 @@ SOURCES = {
         "dias_solicitados": "sa.dias_solicitados",
         "fecha_inicio": "sa.fecha_inicio", "fecha_fin": "sa.fecha_fin",
     },
+    "empleados": {
+        "codigo": "e.codigo", "nombre": "concat(e.nombres, ' ', e.apellido_paterno)",
+        "estado": "e.estado", "departamento": "COALESCE(d.nombre, 'Sin departamento')",
+        "fecha_ingreso": "e.fecha_ingreso", "fecha_salida": "e.fecha_salida",
+    },
+    "contratos": {
+        "empleado": "concat(e.nombres, ' ', e.apellido_paterno)",
+        "departamento": "d.nombre", "cargo": "ca.nombre",
+        "tipo_contrato": "c.tipo_contrato", "modalidad": "c.modalidad",
+        "estado": "c.estado", "salario_basico": "c.salario_basico",
+        "fecha_inicio": "c.fecha_inicio", "fecha_fin": "c.fecha_fin",
+    },
+    "boletas": {
+        "empleado": "concat(e.nombres, ' ', e.apellido_paterno)",
+        "departamento": "d.nombre", "periodo": "concat(pn.gestion, '-', lpad(pn.mes::text, 2, '0'))",
+        "estado": "pn.estado", "total_ganado": "b.total_ganado",
+        "total_descuentos": "b.total_descuentos", "liquido_pagable": "b.liquido_pagable",
+        "fecha_periodo": "make_date(pn.gestion, pn.mes, 1)",
+        "es_muestra": "EXISTS (SELECT 1 FROM boleta_detalle bd WHERE bd.boleta_id=b.id AND bd.codigo='DATOS_MUESTRA')",
+    },
+    "capacitaciones": {
+        "curso": "cu.titulo", "categoria": "cu.categoria",
+        "empleado": "concat(e.nombres, ' ', e.apellido_paterno)",
+        "estado": "i.estado", "progreso": "i.progreso", "calificacion": "i.calificacion",
+        "obligatorio": "cu.es_obligatorio", "fecha_inscripcion": "i.inscrito_en",
+    },
 }
 FROM_SQL = {
     "vacantes": "vacante v",
@@ -81,16 +110,53 @@ FROM_SQL = {
     "AND (c.fecha_fin IS NULL OR c.fecha_fin>=sa.fecha_inicio) "
     "ORDER BY c.fecha_inicio DESC LIMIT 1) contrato_area ON true "
     "LEFT JOIN departamento d ON d.id=contrato_area.departamento_id AND d.empresa_id=sa.empresa_id",
+    "empleados": "empleado e LEFT JOIN LATERAL (SELECT c.departamento_id FROM contrato c "
+    "WHERE c.empleado_id=e.id AND c.empresa_id=e.empresa_id ORDER BY c.fecha_inicio DESC LIMIT 1) "
+    "area_actual ON true LEFT JOIN departamento d ON d.id=area_actual.departamento_id "
+    "AND d.empresa_id=e.empresa_id",
+    "contratos": "contrato c JOIN empleado e ON e.id=c.empleado_id AND e.empresa_id=c.empresa_id "
+    "JOIN departamento d ON d.id=c.departamento_id AND d.empresa_id=c.empresa_id "
+    "JOIN cargo ca ON ca.id=c.cargo_id AND ca.empresa_id=c.empresa_id",
+    "boletas": "boleta_pago b JOIN periodo_nomina pn ON pn.id=b.periodo_id AND pn.empresa_id=b.empresa_id "
+    "JOIN empleado e ON e.id=b.empleado_id AND e.empresa_id=b.empresa_id "
+    "JOIN contrato c ON c.id=b.contrato_id AND c.empresa_id=b.empresa_id "
+    "JOIN departamento d ON d.id=c.departamento_id AND d.empresa_id=b.empresa_id",
+    "capacitaciones": "inscripcion i JOIN curso cu ON cu.id=i.curso_id AND cu.empresa_id=i.empresa_id "
+    "JOIN empleado e ON e.id=i.empleado_id AND e.empresa_id=i.empresa_id",
 }
-TENANT_COLUMN = {"vacantes": "v.empresa_id", "usuarios": "u.empresa_id", "postulaciones": "v.empresa_id", "ausencias": "sa.empresa_id"}
+TENANT_COLUMN = {"vacantes": "v.empresa_id", "usuarios": "u.empresa_id", "postulaciones": "v.empresa_id", "ausencias": "sa.empresa_id", "empleados": "e.empresa_id", "contratos": "c.empresa_id", "boletas": "b.empresa_id", "capacitaciones": "i.empresa_id"}
 FIELD_ALIASES = {
     "vacantes": {"fecha": "fecha_publicacion", "nombre": "titulo", "cargo": "titulo", "ciudad": "ubicacion"},
     "usuarios": {"nombre": "nombres", "apellido": "apellidos", "usuario": "username", "fecha": "ultimo_acceso"},
     "postulaciones": {"fecha": "fecha_postulacion", "nombre": "postulante", "candidato": "postulante", "cargo": "vacante"},
     "ausencias": {"fecha": "fecha_inicio", "area": "departamento", "área": "departamento", "nombre": "empleado", "dias": "dias_solicitados"},
+    "empleados": {"fecha": "fecha_ingreso", "area": "departamento", "área": "departamento"},
+    "contratos": {"fecha": "fecha_inicio", "area": "departamento", "área": "departamento", "salario": "salario_basico"},
+    "boletas": {"fecha": "fecha_periodo", "mes": "periodo", "liquido": "liquido_pagable", "salario": "total_ganado", "area": "departamento", "área": "departamento"},
+    "capacitaciones": {"fecha": "fecha_inscripcion", "nombre": "empleado", "curso_nombre": "curso"},
 }
-NUMERIC_FIELDS = {"vacantes": {"cantidad_vacantes"}, "usuarios": set(), "postulaciones": {"puntaje"}, "ausencias": {"dias_solicitados"}}
-DATE_FIELDS = {"vacantes": {"fecha_publicacion"}, "usuarios": {"ultimo_acceso"}, "postulaciones": {"fecha_postulacion"}, "ausencias": {"fecha_inicio", "fecha_fin"}}
+NUMERIC_FIELDS = {"vacantes": {"cantidad_vacantes"}, "usuarios": set(), "postulaciones": {"puntaje"}, "ausencias": {"dias_solicitados"}, "empleados": set(), "contratos": {"salario_basico"}, "boletas": {"total_ganado", "total_descuentos", "liquido_pagable"}, "capacitaciones": {"progreso", "calificacion"}}
+DATE_FIELDS = {"vacantes": {"fecha_publicacion"}, "usuarios": {"ultimo_acceso"}, "postulaciones": {"fecha_postulacion"}, "ausencias": {"fecha_inicio", "fecha_fin"}, "empleados": {"fecha_ingreso", "fecha_salida"}, "contratos": {"fecha_inicio", "fecha_fin"}, "boletas": {"fecha_periodo"}, "capacitaciones": {"fecha_inscripcion"}}
+SOURCE_PERMISSIONS = {
+    "ausencias": ("personal:ver", "platform:personal:ver"),
+    "empleados": ("empleados:ver", "platform:personal:ver"),
+    "contratos": ("personal:ver", "platform:personal:ver"),
+    "boletas": ("boletas:ver", "platform:boletas:ver"),
+    "capacitaciones": ("capacitacion:ver", "platform:capacitacion:gestionar"),
+}
+
+
+async def _authorize_source(session: AsyncSession, user: CurrentUser, source: str) -> None:
+    required = SOURCE_PERMISSIONS.get(source)
+    if not required:
+        return
+    permission = required[1] if user.es_plataforma else required[0]
+    try:
+        await CheckPermission(SqlAlchemyAuthorizationRepository(session)).execute(
+            user_id=user.id, empresa_id=user.empresa_id, required_permission=permission
+        )
+    except PermissionDeniedError as exc:
+        raise HTTPException(403, "Sin permiso para la fuente del reporte") from exc
 
 
 async def _audit(session: AsyncSession, request: Request, user: CurrentUser, empresa_id: str, action: str, description: str, record_id: str | None = None, new_data: dict | None = None) -> None:
@@ -165,9 +231,18 @@ def _serialize(model: ReporteDefinicionModel) -> ReporteResponse:
 
 
 @router.get("/catalogo")
-async def catalogo(_: CurrentUser = Depends(require_scoped_permission("reportes:ver", "platform:reportes:gestionar"))):
+async def catalogo(user: CurrentUser = Depends(require_scoped_permission("reportes:ver", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
     """Lista las fuentes y columnas que pueden utilizarse sin aceptar SQL libre."""
-    return [{"codigo": code, "nombre": code.replace("_", " ").title(), "columnas": list(cols)} for code, cols in SOURCES.items()]
+    available = []
+    for code, cols in SOURCES.items():
+        try:
+            await _authorize_source(session, user, code)
+        except HTTPException as exc:
+            if exc.status_code == 403:
+                continue
+            raise
+        available.append({"codigo": code, "nombre": code.replace("_", " ").title(), "columnas": list(cols)})
+    return available
 
 
 @router.post("/interpretar", response_model=InterpretarReporteResponse)
@@ -192,11 +267,12 @@ async def interpretar(
             config=None, aclaracion=result.aclaracion or "Aclara qué reporte necesitas"
         )
     source = result.fuente.strip().lower()
-    source = {"vacante": "vacantes", "usuario": "usuarios", "postulacion": "postulaciones", "ausencia": "ausencias"}.get(source, source)
+    source = {"vacante": "vacantes", "usuario": "usuarios", "postulacion": "postulaciones", "ausencia": "ausencias", "empleado": "empleados", "contrato": "contratos", "boleta": "boletas", "capacitacion": "capacitaciones", "capacitación": "capacitaciones", "inscripcion": "capacitaciones"}.get(source, source)
     if source not in SOURCES:
         return InterpretarReporteResponse(
             config=None, aclaracion="No pude identificar una fuente de reporte disponible"
         )
+    await _authorize_source(session, user, source)
     try:
         config = ReporteConfig(
             fuente=source,
@@ -218,7 +294,7 @@ async def interpretar(
     field = _report_field(source, result.grafico_campo) if result.grafico_campo else None
     metric = _report_field(source, result.grafico_metrica) if result.grafico_metrica else None
     if field not in SOURCES[source]:
-        field = next((name for name in ("estado", "activo", "departamento", "fecha_inicio", "fecha_postulacion", "fecha_publicacion", "ultimo_acceso") if name in SOURCES[source]), config.columnas[0])
+        field = next((name for name in ("estado", "activo", "departamento", "fecha_periodo", "fecha_inscripcion", "fecha_ingreso", "fecha_inicio", "fecha_postulacion", "fecha_publicacion", "ultimo_acceso") if name in SOURCES[source]), config.columnas[0])
     if metric not in NUMERIC_FIELDS[source]:
         metric = None
     kind = result.grafico_tipo if result.grafico_tipo in ("bars", "donut", "line") else "bars"
@@ -238,6 +314,7 @@ async def listar(empresa_id: str | None = None, user: CurrentUser = Depends(requ
 async def crear(body: CrearReporte, request: Request, empresa_id: str | None = None, user: CurrentUser = Depends(require_scoped_permission("reportes:crear", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
     """Guarda una definición validada para reutilizar columnas, filtros y orden."""
     _validate(body)
+    await _authorize_source(session, user, body.fuente)
     await require_plan_feature(session, _empresa(user, empresa_id), "reportes_avanzados")
     model = ReporteDefinicionModel(empresa_id=_empresa(user, empresa_id), usuario_id=user.id, **body.model_dump())
     session.add(model); await session.flush(); await session.refresh(model)
@@ -260,6 +337,7 @@ async def actualizar(report_id: str, body: ActualizarReporte, empresa_id: str | 
 async def vista_previa(body: ReporteConfig, empresa_id: str | None = None, page: int = Query(1, ge=1), per_page: int = Query(25, ge=1, le=100), user: CurrentUser = Depends(require_scoped_permission("reportes:ejecutar", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
     """Ejecuta una consulta limitada y devuelve una vista previa paginada."""
     target = _empresa(user, empresa_id)
+    await _authorize_source(session, user, body.fuente)
     await require_plan_feature(session, target, "reportes_avanzados")
     rows = await _rows(session, target, body); start = (page - 1) * per_page
     return VistaPrevia(columnas=body.columnas, items=rows[start:start + per_page], total=len(rows), page=page, per_page=per_page)
@@ -269,6 +347,7 @@ async def vista_previa(body: ReporteConfig, empresa_id: str | None = None, page:
 async def grafico(body: GraficoConfig, empresa_id: str | None = None, user: CurrentUser = Depends(require_scoped_permission("reportes:ejecutar", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
     """Agrupa todos los registros filtrados, no solo la página de vista previa."""
     target = _empresa(user, empresa_id)
+    await _authorize_source(session, user, body.fuente)
     await require_plan_feature(session, target, "reportes_avanzados")
     columns = _validate(body)
     if body.campo not in columns:
@@ -334,6 +413,7 @@ def _document(config: ReporteConfig, rows: list[dict], formato: str) -> tuple[by
 async def exportar(formato: str, body: ReporteConfig, request: Request, empresa_id: str | None = None, user: CurrentUser = Depends(require_scoped_permission("reportes:exportar", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
     """Genera y descarga el reporte en CSV, HTML, Excel o PDF y registra la ejecución."""
     target = _empresa(user, empresa_id)
+    await _authorize_source(session, user, body.fuente)
     await require_plan_feature(session, target, "reportes_avanzados")
     rows = await _rows(session, target, body)
     content, media = _document(body, rows, formato)
@@ -348,6 +428,7 @@ async def enviar(body: EnviarReporteRequest, request: Request, empresa_id: str |
     if not all((settings.smtp_host, settings.smtp_from_email, settings.smtp_only_email)):
         raise HTTPException(503, "El envío de correo no está configurado")
     config = ReporteConfig(**body.model_dump(exclude={"destinatarios", "formato"})); target = _empresa(user, empresa_id)
+    await _authorize_source(session, user, config.fuente)
     await require_plan_feature(session, target, "reportes_avanzados")
     rows = await _rows(session, target, config); content, media = _document(config, rows, body.formato)
     message = EmailMessage(); message["Subject"] = "Reporte SSAH RRHH"; message["From"] = settings.smtp_from_email; message["To"] = settings.smtp_only_email; message.set_content("Se adjunta el reporte solicitado.")
