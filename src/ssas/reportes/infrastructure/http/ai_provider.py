@@ -5,7 +5,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 import httpx
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, model_validator
 
 from ssas.config.settings import Settings
 
@@ -39,6 +39,26 @@ class InterpretedReport(BaseModel):
     grafico_campo: str | None = None
     grafico_metrica: str | None = None
     grafico_tipo: str | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_json_mode(cls, value):
+        """JSON mode can return one order object and symbolic comparison operators."""
+        if not isinstance(value, dict):
+            return value
+        data = value.copy()
+        for name in ("filtros", "orden"):
+            if isinstance(data.get(name), dict):
+                data[name] = [data[name]]
+            elif data.get(name) is None:
+                data[name] = []
+        operators = {">=": "mayor_igual", "<=": "menor_igual", "=": "igual", "==": "igual"}
+        if isinstance(data["filtros"], list):
+            data["filtros"] = [
+                {**item, "operador": operators.get(item.get("operador"), item.get("operador"))}
+                if isinstance(item, dict) else item for item in data["filtros"]
+            ]
+        return data
 
 
 REPORT_SCHEMA = {
@@ -108,6 +128,10 @@ class GeminiReportInterpreter:
                 "elige campo de agrupación, métrica numérica opcional y tipo "
                 "bars/donut/line; line solo para fechas. Si no se especifica, "
                 "usa el campo más informativo (estado o fecha), conteo y bars. "
+                "Para 'qué área tuvo más ausencias' agrupa por departamento y "
+                "cuenta solicitudes: grafico_metrica vacío. Suma dias_solicitados "
+                "solo si preguntan por días. orden y filtros siempre son listas; "
+                "usa mayor_igual y menor_igual, nunca >= ni <=. "
                 "Usa cadenas vacías y listas vacías cuando corresponda."
             )}]},
             "contents": [{"role": "user", "parts": [{"text": json.dumps({

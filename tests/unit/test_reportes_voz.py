@@ -60,7 +60,8 @@ async def test_provider_sends_only_the_query_not_catalog_or_rows():
     assert result.fuente == "postulaciones"
     assert sent[0]["generationConfig"]["responseMimeType"] == "application/json"
     assert sent[0]["generationConfig"]["responseSchema"]["required"] == [
-        "fuente", "columnas", "filtros", "orden", "necesita_aclaracion", "aclaracion"
+        "fuente", "columnas", "filtros", "orden", "necesita_aclaracion", "aclaracion",
+        "grafico_campo", "grafico_metrica", "grafico_tipo"
     ]
     sent_text = sent[0]["contents"][0]["parts"][0]["text"]
     assert json.loads(sent_text)["consulta"] == "postulaciones de septiembre"
@@ -89,6 +90,27 @@ async def test_provider_falls_back_when_schema_is_rejected():
     assert result.fuente == "postulaciones"
     assert "responseSchema" in requests[0]["generationConfig"]
     assert "responseSchema" not in requests[1]["generationConfig"]
+
+
+@pytest.mark.asyncio
+async def test_json_mode_normalizes_single_order_and_comparison_symbols():
+    payload = {
+        "fuente": "ausencias", "columnas": ["departamento"],
+        "filtros": [{"campo": "fecha_inicio", "operador": ">=", "valor": "2026-10-01"}],
+        "orden": {"campo": "dias_solicitados", "direccion": "desc"},
+        "necesita_aclaracion": False, "aclaracion": "",
+        "grafico_campo": "departamento", "grafico_metrica": "", "grafico_tipo": "bars",
+    }
+    transport = httpx.MockTransport(lambda _: httpx.Response(200, json={
+        "candidates": [{"finishReason": "STOP", "content": {
+            "parts": [{"text": json.dumps(payload)}]
+        }}],
+    }))
+    config = Settings(_env_file=None, app_secret_key="test", gemini_api_key="test-only")
+    result = await GeminiReportInterpreter(config, transport).interpret("ausencias por área")
+    assert result.filtros[0].operador == "mayor_igual"
+    assert result.orden[0].campo == "dias_solicitados"
+    assert result.grafico_campo == "departamento"
 
 
 @pytest.mark.asyncio
