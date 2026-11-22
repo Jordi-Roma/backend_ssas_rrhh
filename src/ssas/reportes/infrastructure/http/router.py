@@ -64,7 +64,7 @@ SOURCES = {
     },
     "ausencias": {
         "empleado": "concat(e.nombres, ' ', e.apellido_paterno)",
-        "departamento": "d.nombre", "estado": "sa.estado",
+        "departamento": "COALESCE(d.nombre, 'Sin departamento en esa fecha')", "estado": "sa.estado",
         "dias_solicitados": "sa.dias_solicitados",
         "fecha_inicio": "sa.fecha_inicio", "fecha_fin": "sa.fecha_fin",
     },
@@ -78,6 +78,7 @@ FROM_SQL = {
     "AND e.empresa_id=sa.empresa_id LEFT JOIN LATERAL "
     "(SELECT c.departamento_id FROM contrato c WHERE c.empleado_id=sa.empleado_id "
     "AND c.empresa_id=sa.empresa_id AND c.fecha_inicio<=sa.fecha_inicio "
+    "AND (c.fecha_fin IS NULL OR c.fecha_fin>=sa.fecha_inicio) "
     "ORDER BY c.fecha_inicio DESC LIMIT 1) contrato_area ON true "
     "LEFT JOIN departamento d ON d.id=contrato_area.departamento_id AND d.empresa_id=sa.empresa_id",
 }

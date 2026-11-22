@@ -17,6 +17,12 @@ from ssas.reportes.infrastructure.http.router import (
     _validate,
     grafico,
 )
+
+
+def test_absence_report_labels_missing_historical_department() -> None:
+    assert "Sin departamento en esa fecha" in SOURCES["ausencias"]["departamento"]
+    assert "c.fecha_fin>=sa.fecha_inicio" in FROM_SQL["ausencias"]
+    assert TENANT_COLUMN["ausencias"] == "sa.empresa_id"
 from ssas.reportes.infrastructure.http.schemas import GraficoConfig, ReporteConfig
 from ssas.vacantes.infrastructure.persistence.models.vacante import VacanteModel
 
