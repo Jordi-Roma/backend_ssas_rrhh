@@ -62,21 +62,34 @@ SOURCES = {
         "puntaje": "COALESCE(po.puntaje_manual, po.puntaje_ia)",
         "fecha_postulacion": "po.fecha_postulacion",
     },
+    "ausencias": {
+        "empleado": "concat(e.nombres, ' ', e.apellido_paterno)",
+        "departamento": "d.nombre", "estado": "sa.estado",
+        "dias_solicitados": "sa.dias_solicitados",
+        "fecha_inicio": "sa.fecha_inicio", "fecha_fin": "sa.fecha_fin",
+    },
 }
 FROM_SQL = {
     "vacantes": "vacante v",
     "usuarios": "usuario u",
     "postulaciones": "postulacion po JOIN vacante v ON v.id=po.vacante_id "
     "JOIN postulante p ON p.id=po.postulante_id AND p.empresa_id=v.empresa_id",
+    "ausencias": "solicitud_ausencia sa JOIN empleado e ON e.id=sa.empleado_id "
+    "AND e.empresa_id=sa.empresa_id LEFT JOIN LATERAL "
+    "(SELECT c.departamento_id FROM contrato c WHERE c.empleado_id=sa.empleado_id "
+    "AND c.empresa_id=sa.empresa_id AND c.fecha_inicio<=sa.fecha_inicio "
+    "ORDER BY c.fecha_inicio DESC LIMIT 1) contrato_area ON true "
+    "LEFT JOIN departamento d ON d.id=contrato_area.departamento_id AND d.empresa_id=sa.empresa_id",
 }
-TENANT_COLUMN = {"vacantes": "v.empresa_id", "usuarios": "u.empresa_id", "postulaciones": "v.empresa_id"}
+TENANT_COLUMN = {"vacantes": "v.empresa_id", "usuarios": "u.empresa_id", "postulaciones": "v.empresa_id", "ausencias": "sa.empresa_id"}
 FIELD_ALIASES = {
     "vacantes": {"fecha": "fecha_publicacion", "nombre": "titulo", "cargo": "titulo", "ciudad": "ubicacion"},
     "usuarios": {"nombre": "nombres", "apellido": "apellidos", "usuario": "username", "fecha": "ultimo_acceso"},
     "postulaciones": {"fecha": "fecha_postulacion", "nombre": "postulante", "candidato": "postulante", "cargo": "vacante"},
+    "ausencias": {"fecha": "fecha_inicio", "area": "departamento", "área": "departamento", "nombre": "empleado", "dias": "dias_solicitados"},
 }
-NUMERIC_FIELDS = {"vacantes": {"cantidad_vacantes"}, "usuarios": set(), "postulaciones": {"puntaje"}}
-DATE_FIELDS = {"vacantes": {"fecha_publicacion"}, "usuarios": {"ultimo_acceso"}, "postulaciones": {"fecha_postulacion"}}
+NUMERIC_FIELDS = {"vacantes": {"cantidad_vacantes"}, "usuarios": set(), "postulaciones": {"puntaje"}, "ausencias": {"dias_solicitados"}}
+DATE_FIELDS = {"vacantes": {"fecha_publicacion"}, "usuarios": {"ultimo_acceso"}, "postulaciones": {"fecha_postulacion"}, "ausencias": {"fecha_inicio", "fecha_fin"}}
 
 
 async def _audit(session: AsyncSession, request: Request, user: CurrentUser, empresa_id: str, action: str, description: str, record_id: str | None = None, new_data: dict | None = None) -> None:
@@ -178,7 +191,7 @@ async def interpretar(
             config=None, aclaracion=result.aclaracion or "Aclara qué reporte necesitas"
         )
     source = result.fuente.strip().lower()
-    source = {"vacante": "vacantes", "usuario": "usuarios", "postulacion": "postulaciones"}.get(source, source)
+    source = {"vacante": "vacantes", "usuario": "usuarios", "postulacion": "postulaciones", "ausencia": "ausencias"}.get(source, source)
     if source not in SOURCES:
         return InterpretarReporteResponse(
             config=None, aclaracion="No pude identificar una fuente de reporte disponible"
@@ -201,7 +214,16 @@ async def interpretar(
             config=None,
             aclaracion="No pude relacionar todos los campos con el catálogo. Reformula la consulta",
         )
-    return InterpretarReporteResponse(config=config)
+    field = _report_field(source, result.grafico_campo) if result.grafico_campo else None
+    metric = _report_field(source, result.grafico_metrica) if result.grafico_metrica else None
+    if field not in SOURCES[source]:
+        field = next((name for name in ("estado", "activo", "departamento", "fecha_inicio", "fecha_postulacion", "fecha_publicacion", "ultimo_acceso") if name in SOURCES[source]), config.columnas[0])
+    if metric not in NUMERIC_FIELDS[source]:
+        metric = None
+    kind = result.grafico_tipo if result.grafico_tipo in ("bars", "donut", "line") else "bars"
+    if kind == "line" and field not in DATE_FIELDS[source]:
+        kind = "bars"
+    return InterpretarReporteResponse(config=config, grafico_campo=field, grafico_metrica=metric, grafico_tipo=kind)
 
 
 @router.get("", response_model=list[ReporteResponse])

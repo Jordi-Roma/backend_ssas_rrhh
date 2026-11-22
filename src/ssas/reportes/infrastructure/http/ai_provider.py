@@ -36,6 +36,9 @@ class InterpretedReport(BaseModel):
     orden: list[InterpretedOrder]
     necesita_aclaracion: bool
     aclaracion: str
+    grafico_campo: str | None = None
+    grafico_metrica: str | None = None
+    grafico_tipo: str | None = None
 
 
 REPORT_SCHEMA = {
@@ -64,9 +67,13 @@ REPORT_SCHEMA = {
         }},
         "necesita_aclaracion": {"type": "BOOLEAN"},
         "aclaracion": {"type": "STRING"},
+        "grafico_campo": {"type": "STRING"},
+        "grafico_metrica": {"type": "STRING"},
+        "grafico_tipo": {"type": "STRING", "enum": ["bars", "donut", "line", ""]},
     },
     "required": [
-        "fuente", "columnas", "filtros", "orden", "necesita_aclaracion", "aclaracion"
+        "fuente", "columnas", "filtros", "orden", "necesita_aclaracion", "aclaracion",
+        "grafico_campo", "grafico_metrica", "grafico_tipo"
     ],
 }
 
@@ -93,9 +100,15 @@ class GeminiReportInterpreter:
                 "ubicacion, cantidad_vacantes, fecha_publicacion); usuarios (nombres, "
                 "apellidos, email, username, telefono, activo, ultimo_acceso); "
                 "postulaciones (postulante, email, vacante, estado, puntaje, "
-                "fecha_postulacion). Devuelve exactamente fuente, columnas, filtros, "
-                "orden, necesita_aclaracion y aclaracion; usa listas vacias cuando "
-                "no haya filtros u orden."
+                "fecha_postulacion); ausencias (empleado, departamento, estado, "
+                "dias_solicitados, fecha_inicio, fecha_fin). Para preguntas por área "
+                "de ausencias usa departamento. Devuelve exactamente fuente, columnas, filtros, "
+                "orden, necesita_aclaracion, aclaracion, grafico_campo, "
+                "grafico_metrica y grafico_tipo. Cuando se solicite un gráfico, "
+                "elige campo de agrupación, métrica numérica opcional y tipo "
+                "bars/donut/line; line solo para fechas. Si no se especifica, "
+                "usa el campo más informativo (estado o fecha), conteo y bars. "
+                "Usa cadenas vacías y listas vacías cuando corresponda."
             )}]},
             "contents": [{"role": "user", "parts": [{"text": json.dumps({
                 "consulta": text,

@@ -70,6 +70,9 @@ class InterpretarReporteRequest(BaseModel):
 class InterpretarReporteResponse(BaseModel):
     config: ReporteConfig | None
     aclaracion: str | None = None
+    grafico_campo: str | None = None
+    grafico_metrica: str | None = None
+    grafico_tipo: Literal["bars", "donut", "line"] | None = None
 
 
 class EnviarReporteRequest(ReporteConfig):

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,6 +31,11 @@ from ssas.vacantes.infrastructure.http.schemas import (
 from ssas.vacantes.infrastructure.persistence.repositories.vacante_repository import (
     SqlAlchemyVacanteRepository,
 )
+from ssas.vacantes.infrastructure.persistence.models.vacante import VacanteModel
+from ssas.vacantes.infrastructure.persistence.models.vacante_habilidad import VacanteHabilidadModel
+from ssas.capacitacion.models import EmpleadoHabilidadModel
+from ssas.empleados.infrastructure.persistence.models.empleado import EmpleadoModel
+from ssas.habilidades.infrastructure.persistence.models.habilidad import HabilidadModel
 
 router = APIRouter(prefix="/vacantes", tags=[TAG_VACANTES])
 public_router = APIRouter(prefix="/publico", tags=["Portal público"])
@@ -157,6 +163,57 @@ async def crear_vacante(
         **_audit_context(http_request, current_user),
     )
     return vacante
+
+
+@router.get("/{vacante_id}/candidatos-internos")
+async def candidatos_internos(
+    vacante_id: str,
+    empresa_id: str | None = Query(default=None, description=EMPRESA_SCOPE_DESCRIPTION),
+    current_user: CurrentUser = Depends(require_scoped_permission("vacantes:ver", "platform:vacantes:gestionar")),
+    _: CurrentUser = Depends(require_scoped_permission("empleados:ver", "platform:vacantes:gestionar")),
+    session: AsyncSession = Depends(get_session),
+):
+    """Sugiere perfiles internos por habilidades acreditadas; no postula ni contrata."""
+    target = _empresa(current_user, empresa_id)
+    vacancy = await session.scalar(select(VacanteModel).where(
+        VacanteModel.id == vacante_id, VacanteModel.empresa_id == target))
+    if vacancy is None:
+        raise HTTPException(404, "Vacante no encontrada")
+    requirements = (await session.execute(
+        select(VacanteHabilidadModel, HabilidadModel.nombre)
+        .join(HabilidadModel, HabilidadModel.id == VacanteHabilidadModel.habilidad_id)
+        .where(VacanteHabilidadModel.vacante_id == vacante_id, HabilidadModel.empresa_id == target)
+    )).all()
+    if not requirements:
+        return {"vacante_id": vacante_id, "evaluables": False, "candidatos": []}
+    employees = (await session.scalars(select(EmpleadoModel).where(
+        EmpleadoModel.empresa_id == target, EmpleadoModel.estado == "ACTIVO",
+        EmpleadoModel.fecha_salida.is_(None)))).all()
+    employee_ids = [employee.id for employee in employees]
+    skills = (await session.scalars(select(EmpleadoHabilidadModel).where(
+        EmpleadoHabilidadModel.empresa_id == target,
+        EmpleadoHabilidadModel.empleado_id.in_(employee_ids)))).all() if employee_ids else []
+    by_employee: dict[str, set[str]] = {}
+    for skill in skills:
+        by_employee.setdefault(skill.empleado_id, set()).add(skill.habilidad_id)
+    total_weight = sum(float(requirement.peso) for requirement, _ in requirements)
+    candidates = []
+    for employee in employees:
+        owned = by_employee.get(employee.id, set())
+        matched = [name for requirement, name in requirements if requirement.habilidad_id in owned]
+        missing = [name for requirement, name in requirements if requirement.habilidad_id not in owned]
+        mandatory = [name for requirement, name in requirements
+                     if requirement.es_obligatorio and requirement.habilidad_id not in owned]
+        matched_weight = sum(float(requirement.peso) for requirement, _ in requirements
+                             if requirement.habilidad_id in owned)
+        candidates.append({"empleado_id": employee.id,
+                           "nombre": f"{employee.nombres} {employee.apellido_paterno}".strip(),
+                           "codigo": employee.codigo,
+                           "afinidad": round(100 * matched_weight / total_weight, 1),
+                           "coinciden": matched, "faltan": missing,
+                           "obligatorias_pendientes": mandatory})
+    candidates.sort(key=lambda item: (-item["afinidad"], len(item["obligatorias_pendientes"]), item["nombre"]))
+    return {"vacante_id": vacante_id, "evaluables": True, "candidatos": candidates[:20]}
 
 
 @router.get(
