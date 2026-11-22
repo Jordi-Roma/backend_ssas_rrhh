@@ -1,5 +1,6 @@
 import re
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
@@ -14,8 +15,9 @@ from ssas.reportes.infrastructure.http.router import (
     _document,
     _rows,
     _validate,
+    grafico,
 )
-from ssas.reportes.infrastructure.http.schemas import ReporteConfig
+from ssas.reportes.infrastructure.http.schemas import GraficoConfig, ReporteConfig
 from ssas.vacantes.infrastructure.persistence.models.vacante import VacanteModel
 
 
@@ -78,6 +80,29 @@ def test_all_report_columns_exist_in_the_database_models() -> None:
         for expression in expressions:
             for alias, column in re.findall(r"\b(v|u|po|p)\.([a-z_]+)\b", expression):
                 assert column in aliases[alias], f"{source}: {alias}.{column} no existe"
+
+
+@pytest.mark.asyncio
+async def test_chart_aggregates_all_filtered_rows_with_tenant_scope() -> None:
+    session = MagicMock()
+    total = MagicMock(); total.mappings.return_value.one.return_value = {"total": 85, "value": 85}
+    groups = MagicMock(); groups.mappings.return_value.all.return_value = [
+        {"label": "ACTIVA", "count": 65, "value": 65},
+        {"label": "RETIRADA", "count": 15, "value": 15},
+    ]
+    session.execute = AsyncMock(side_effect=[total, groups])
+    user = SimpleNamespace(empresa_id="empresa-a", es_plataforma=False)
+    body = GraficoConfig(fuente="postulaciones", columnas=["postulante"], campo="estado",
+                         filtros=[{"campo": "fecha_postulacion", "operador": "mayor_igual", "valor": "2026-09-01"}])
+    with patch("ssas.reportes.infrastructure.http.router.require_plan_feature", new_callable=AsyncMock):
+        result = await grafico(body, None, user, session)
+    assert result["total"] == 85
+    assert result["grupos"][-1] == {"label": "Otros", "count": 5, "value": 5}
+    statement, params = session.execute.await_args_list[1].args
+    assert "v.empresa_id = :empresa_id" in str(statement)
+    assert "po.fecha_postulacion >= :v0" in str(statement)
+    assert "GROUP BY 1" in str(statement)
+    assert params == {"empresa_id": "empresa-a", "v0": "2026-09-01"}
 
 
 @pytest.mark.asyncio

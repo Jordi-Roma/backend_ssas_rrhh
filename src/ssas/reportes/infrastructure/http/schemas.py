@@ -58,6 +58,11 @@ class VistaPrevia(BaseModel):
     per_page: int
 
 
+class GraficoConfig(ReporteConfig):
+    campo: str
+    metrica: str | None = None
+
+
 class InterpretarReporteRequest(BaseModel):
     texto: str = Field(min_length=3, max_length=500)
 

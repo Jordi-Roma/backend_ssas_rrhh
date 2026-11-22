@@ -30,6 +30,7 @@ from ssas.reportes.infrastructure.http.schemas import (
     ActualizarReporte,
     CrearReporte,
     EnviarReporteRequest,
+    GraficoConfig,
     InterpretarReporteRequest,
     InterpretarReporteResponse,
     ReporteConfig,
@@ -74,6 +75,8 @@ FIELD_ALIASES = {
     "usuarios": {"nombre": "nombres", "apellido": "apellidos", "usuario": "username", "fecha": "ultimo_acceso"},
     "postulaciones": {"fecha": "fecha_postulacion", "nombre": "postulante", "candidato": "postulante", "cargo": "vacante"},
 }
+NUMERIC_FIELDS = {"vacantes": {"cantidad_vacantes"}, "usuarios": set(), "postulaciones": {"puntaje"}}
+DATE_FIELDS = {"vacantes": {"fecha_publicacion"}, "usuarios": {"ultimo_acceso"}, "postulaciones": {"fecha_postulacion"}}
 
 
 async def _audit(session: AsyncSession, request: Request, user: CurrentUser, empresa_id: str, action: str, description: str, record_id: str | None = None, new_data: dict | None = None) -> None:
@@ -112,6 +115,16 @@ def _report_field(source: str, field: str) -> str:
 async def _rows(session: AsyncSession, empresa_id: str, config: ReporteConfig) -> list[dict]:
     columns = _validate(config)
     selected = ", ".join(f"{columns[name]} AS {name}" for name in config.columnas)
+    clauses, params = _conditions(config, empresa_id, columns)
+    order = ", ".join(f"{columns[o.campo]} {o.direccion.upper()}" for o in config.orden)
+    sql = f"SELECT {selected} FROM {FROM_SQL[config.fuente]} WHERE {' AND '.join(clauses)}"
+    if order: sql += f" ORDER BY {order}"
+    sql += " LIMIT 5000"
+    result = await session.execute(text(sql), params)
+    return [dict(row) for row in result.mappings().all()]
+
+
+def _conditions(config: ReporteConfig, empresa_id: str, columns: dict[str, str]) -> tuple[list[str], dict]:
     clauses = [f"{TENANT_COLUMN[config.fuente]} = :empresa_id"]
     params: dict = {"empresa_id": empresa_id}
     for index, item in enumerate(config.filtros):
@@ -130,12 +143,7 @@ async def _rows(session: AsyncSession, empresa_id: str, config: ReporteConfig) -
             params[f"{key}a"], params[f"{key}b"] = item.valor
         else:
             raise HTTPException(422, "Valor de filtro inválido")
-    order = ", ".join(f"{columns[o.campo]} {o.direccion.upper()}" for o in config.orden)
-    sql = f"SELECT {selected} FROM {FROM_SQL[config.fuente]} WHERE {' AND '.join(clauses)}"
-    if order: sql += f" ORDER BY {order}"
-    sql += " LIMIT 5000"
-    result = await session.execute(text(sql), params)
-    return [dict(row) for row in result.mappings().all()]
+    return clauses, params
 
 
 def _serialize(model: ReporteDefinicionModel) -> ReporteResponse:
@@ -232,6 +240,42 @@ async def vista_previa(body: ReporteConfig, empresa_id: str | None = None, page:
     await require_plan_feature(session, target, "reportes_avanzados")
     rows = await _rows(session, target, body); start = (page - 1) * per_page
     return VistaPrevia(columnas=body.columnas, items=rows[start:start + per_page], total=len(rows), page=page, per_page=per_page)
+
+
+@router.post("/grafico")
+async def grafico(body: GraficoConfig, empresa_id: str | None = None, user: CurrentUser = Depends(require_scoped_permission("reportes:ejecutar", "platform:reportes:gestionar")), session: AsyncSession = Depends(get_session)):
+    """Agrupa todos los registros filtrados, no solo la página de vista previa."""
+    target = _empresa(user, empresa_id)
+    await require_plan_feature(session, target, "reportes_avanzados")
+    columns = _validate(body)
+    if body.campo not in columns:
+        raise HTTPException(422, "Campo del gráfico no permitido")
+    if body.metrica and body.metrica not in NUMERIC_FIELDS[body.fuente]:
+        raise HTTPException(422, "Métrica del gráfico no permitida")
+    clauses, params = _conditions(body, target, columns)
+    source = FROM_SQL[body.fuente]
+    where = " AND ".join(clauses)
+    expression = columns[body.campo]
+    is_date = body.campo in DATE_FIELDS[body.fuente]
+    label = (f"COALESCE(to_char(date_trunc('month', {expression}), 'YYYY-MM'), 'Sin fecha')" if is_date
+             else f"COALESCE(CAST({expression} AS TEXT), 'Sin dato')")
+    value = f"COALESCE(SUM({columns[body.metrica]}), 0)" if body.metrica else "COUNT(*)"
+    total_query = text(f"SELECT COUNT(*) AS total, {value} AS value FROM {source} WHERE {where}")
+    totals = (await session.execute(total_query, params)).mappings().one()
+    limit = 24 if is_date else 8
+    order = "label DESC" if is_date else "value DESC, label ASC"
+    chart_query = text(f"SELECT {label} AS label, COUNT(*) AS count, {value} AS value FROM {source} WHERE {where} GROUP BY 1 ORDER BY {order} LIMIT {limit}")
+    groups = [dict(row) for row in (await session.execute(chart_query, params)).mappings().all()]
+    if is_date:
+        groups.reverse()
+    else:
+        remaining = totals["total"] - sum(row["count"] for row in groups)
+        if remaining:
+            groups.append({"label": "Otros", "count": remaining,
+                           "value": totals["value"] - sum(row["value"] for row in groups)})
+    return {"campo": body.campo, "metrica": body.metrica, "total": totals["total"],
+            "total_valor": totals["value"], "grupos": groups,
+            "limite_meses": is_date and totals["total"] > sum(row["count"] for row in groups)}
 
 
 def _document(config: ReporteConfig, rows: list[dict], formato: str) -> tuple[bytes, str]:
