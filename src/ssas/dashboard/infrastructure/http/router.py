@@ -1,11 +1,12 @@
-"""Resumen agregado para la pantalla de inicio, por alcance de la identidad.
+"""Resumen agregado para el dashboard, por alcance de la identidad.
 
 Todo se resuelve con ``func.count`` y agrupaciones: la única consulta que trae filas
-completas es la de las cinco últimas entradas de bitácora.
+completas es la de las últimas entradas de bitácora.
 """
 
 from datetime import datetime
 from typing import Literal
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -57,12 +58,69 @@ class ResumenPlataforma(BaseModel):
     postulaciones_del_mes: int
 
 
+class TendenciaMensual(BaseModel):
+    mes: str
+    vacantes: int
+    postulaciones: int
+
+
 class ResumenDashboardResponse(BaseModel):
     alcance: Literal["EMPRESA", "PLATAFORMA"]
     empresa_id: str | None = None
     empresa: ResumenEmpresa | None = None
     plataforma: ResumenPlataforma | None = None
     bitacora_reciente: list[BitacoraResumen] = Field(default_factory=list)
+    tendencias: list[TendenciaMensual] = Field(default_factory=list)
+
+
+async def _tendencias_mensuales(
+    session: AsyncSession, empresa_id: str | None
+) -> list[TendenciaMensual]:
+    """Conteos mensuales reales de los últimos seis meses, incluido el actual."""
+    local_zone = ZoneInfo("America/La_Paz")
+    now = datetime.now(local_zone)
+    current_month = now.year * 12 + now.month - 1
+    months = [divmod(current_month - offset, 12) for offset in range(5, -1, -1)]
+    first_year, first_month_zero = months[0]
+    since = datetime(first_year, first_month_zero + 1, 1, tzinfo=local_zone)
+
+    vacancy_month = func.date_trunc(
+        "month", func.timezone("America/La_Paz", VacanteModel.fecha_registro)
+    ).label("mes")
+    vacancies_query = (
+        select(vacancy_month, func.count(VacanteModel.id))
+        .where(VacanteModel.fecha_registro >= since)
+        .group_by(vacancy_month)
+    )
+    application_month = func.date_trunc(
+        "month", func.timezone("America/La_Paz", PostulacionModel.fecha_postulacion)
+    ).label("mes")
+    applications_query = (
+        select(application_month, func.count(PostulacionModel.id))
+        .join(VacanteModel, VacanteModel.id == PostulacionModel.vacante_id)
+        .where(PostulacionModel.fecha_postulacion >= since)
+        .group_by(application_month)
+    )
+    if empresa_id is not None:
+        vacancies_query = vacancies_query.where(VacanteModel.empresa_id == empresa_id)
+        applications_query = applications_query.where(VacanteModel.empresa_id == empresa_id)
+
+    vacancies = {
+        month.strftime("%Y-%m"): count
+        for month, count in (await session.execute(vacancies_query)).all()
+    }
+    applications = {
+        month.strftime("%Y-%m"): count
+        for month, count in (await session.execute(applications_query)).all()
+    }
+    return [
+        TendenciaMensual(
+            mes=f"{year:04d}-{month_zero + 1:02d}",
+            vacantes=vacancies.get(f"{year:04d}-{month_zero + 1:02d}", 0),
+            postulaciones=applications.get(f"{year:04d}-{month_zero + 1:02d}", 0),
+        )
+        for year, month_zero in months
+    ]
 
 
 async def _bitacora_reciente(
@@ -170,11 +228,11 @@ async def _resumen_plataforma(session: AsyncSession) -> ResumenPlataforma:
     response_model=ResumenDashboardResponse,
     summary="Consultar resumen del dashboard",
     description=(
-        "Devuelve el resumen agregado de la pantalla de inicio. Un usuario de empresa "
+        "Devuelve el resumen agregado del dashboard. Un usuario de empresa "
         "(permiso `empresa:ver`) recibe los totales de su propia empresa; un "
         "administrador de plataforma (permiso `platform:empresas:ver`) recibe los "
-        "totales globales. En ambos casos se incluyen las cinco últimas entradas de "
-        "bitácora de la empresa o de todas las empresas para la plataforma."
+        "totales globales. Incluye las últimas entradas de bitácora y las tendencias "
+        "mensuales de vacantes y postulaciones del alcance correspondiente."
     ),
 )
 async def resumen_dashboard(
@@ -188,10 +246,12 @@ async def resumen_dashboard(
             alcance="PLATAFORMA",
             plataforma=await _resumen_plataforma(session),
             bitacora_reciente=await _bitacora_reciente(session, None),
+            tendencias=await _tendencias_mensuales(session, None),
         )
     return ResumenDashboardResponse(
         alcance="EMPRESA",
         empresa_id=user.empresa_id,
         empresa=await _resumen_empresa(session, user.empresa_id),
         bitacora_reciente=await _bitacora_reciente(session, user.empresa_id),
+        tendencias=await _tendencias_mensuales(session, user.empresa_id),
     )
