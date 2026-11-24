@@ -68,23 +68,16 @@ class ResumenDashboardResponse(BaseModel):
 async def _bitacora_reciente(
     session: AsyncSession, empresa_id: str | None
 ) -> list[BitacoraResumen]:
-    """Últimas cinco entradas del alcance pedido.
-
-    ``bitacora.empresa_id IS NULL`` identifica los eventos de la plataforma, así que el
-    filtro no puede escribirse con una simple igualdad.
-    """
-    condicion = (
-        AuditLogModel.empresa_id.is_(None)
-        if empresa_id is None
-        else AuditLogModel.empresa_id == empresa_id
-    )
-    result = await session.execute(
+    """Últimos eventos de la empresa o, para plataforma, de todas las empresas."""
+    query = (
         select(AuditLogModel, UserModel.name, UserModel.apellido)
         .outerjoin(UserModel, UserModel.id == AuditLogModel.user_id)
-        .where(condicion)
         .order_by(AuditLogModel.fecha.desc())
-        .limit(5)
+        .limit(8)
     )
+    if empresa_id is not None:
+        query = query.where(AuditLogModel.empresa_id == empresa_id)
+    result = await session.execute(query)
     return [
         BitacoraResumen(
             id=registro.id,
@@ -181,7 +174,7 @@ async def _resumen_plataforma(session: AsyncSession) -> ResumenPlataforma:
         "(permiso `empresa:ver`) recibe los totales de su propia empresa; un "
         "administrador de plataforma (permiso `platform:empresas:ver`) recibe los "
         "totales globales. En ambos casos se incluyen las cinco últimas entradas de "
-        "bitácora del alcance correspondiente."
+        "bitácora de la empresa o de todas las empresas para la plataforma."
     ),
 )
 async def resumen_dashboard(
