@@ -5,6 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from ssas.ayuda.infrastructure.http import chatbot_router, guided_answers
+from ssas.ayuda.infrastructure.http.router import ARTICLES
 from ssas.core.security.dependencies import CurrentUser
 
 COMPANY_ID = "e3b83d1d-e5ee-4ff9-a4f6-dadf61a07504"
@@ -120,6 +121,26 @@ async def test_authenticated_report_question_uses_authorized_system_guide(monkey
     assert answer["respuesta"] == "En Reportes puedes exportar PDF."
     assert answer["enlaces"] == [{"titulo": "Reportes", "ruta": "/reportes"}]
     visible.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_employee_boleta_guide_is_suggested_and_links_to_own_boletas(monkeypatch):
+    guide = next(item for item in ARTICLES if item["id"] == "mis_boletas")
+    monkeypatch.setattr(guided_answers, "_visible", AsyncMock(return_value=[guide]))
+    monkeypatch.setattr(
+        guided_answers,
+        "SqlAlchemyAuthorizationRepository",
+        lambda session: SimpleNamespace(get_user_permission_codes=AsyncMock(return_value=set())),
+    )
+    user = CurrentUser(id="user-1", empresa_id=COMPANY_ID)
+
+    answer = await guided_answers.guided_answer(
+        "¿Dónde veo mis boletas de pago?", COMPANY_ID, None, user, SimpleNamespace()
+    )
+    suggestions = await guided_answers.suggested_questions(False, user, SimpleNamespace())
+
+    assert answer["enlaces"] == [{"titulo": "Consultar mis boletas de pago", "ruta": "/nomina/mis-boletas"}]
+    assert "¿Dónde veo mis boletas de pago?" in suggestions
 
 
 @pytest.mark.asyncio

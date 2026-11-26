@@ -140,6 +140,15 @@ async def suggested_questions(
     questions = ["¿Qué vacantes hay?", "¿Cómo me postulo?"]
     if not public_only and user is not None:
         guides = await _visible(user, session)
+        available = {item["id"] for item in guides}
+        if "mis_ausencias" in available:
+            questions.append("¿Cómo solicito vacaciones o licencia?")
+        if "mis_boletas" in available:
+            questions.append("¿Dónde veo mis boletas de pago?")
+        if "contratos" in available:
+            questions.append("¿Cómo registro un contrato?")
+        if "habilidades" in available:
+            questions.append("¿Dónde veo mis habilidades?")
         if any(item["id"] == "reportes" for item in guides):
             questions.append("¿Cómo hago reportes?")
         codes = await SqlAlchemyAuthorizationRepository(session).get_user_permission_codes(
